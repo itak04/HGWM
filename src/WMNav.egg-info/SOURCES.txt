@@ -1,0 +1,5 @@
+setup.py
+src/WMNav.egg-info/PKG-INFO
+src/WMNav.egg-info/SOURCES.txt
+src/WMNav.egg-info/dependency_links.txt
+src/WMNav.egg-info/top_level.txt
