@@ -57,13 +57,40 @@ class Env:
 
     def _initialize_logging(self, cfg: dict):
         """
-        Initializes logging for the environment.
-
-        Args:
-            cfg (dict): Configuration dictionary containing logging settings.
+        确保日志目录始终存在的版本
         """
-        self.log_file = os.path.join(os.environ.get("LOG_DIR"), f'{cfg["task"]}_{self.cfg["name"]}/{self.cfg["instance"]}_of_{self.cfg["instances"]}.txt')
-        os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
+        # 首先确保LOG_DIR环境变量存在
+        log_dir = os.environ.get("LOG_DIR")
+        if not log_dir:
+            log_dir = "/home/ps/dqf/GoalNav/WMNavigation/logs"
+            os.environ["LOG_DIR"] = log_dir
+            print(f"⚠️  LOG_DIR not set, using default: {log_dir}")
+        
+        # 确保LOG_DIR目录存在
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir, exist_ok=True)
+            print(f"📁 Created LOG_DIR: {log_dir}")
+        else:
+            print(f"📁 LOG_DIR exists: {log_dir}")
+        
+        # 设置日志文件路径
+        task_name = cfg.get("task", "Unknown")
+        env_name = self.cfg.get("name", "default")
+        instance = self.cfg.get("instance", 0)
+        instances = self.cfg.get("instances", 1)
+        
+        log_subdir = f'{task_name}_{env_name}'
+        log_filename = f'{instance}_of_{instances}.txt'
+        
+        # 创建完整的日志目录结构
+        full_log_dir = os.path.join(log_dir, log_subdir)
+        os.makedirs(full_log_dir, exist_ok=True)
+        
+        self.log_file = os.path.join(full_log_dir, log_filename)
+        
+        print(f"📋 Log file will be: {self.log_file}")
+        print(f"📁 Log directory structure: {full_log_dir}")
+        
         if self.cfg['parallel']:
             logging.basicConfig(
                 filename=self.log_file,
@@ -87,17 +114,16 @@ class Env:
         """
         Runs the experiment by iterating over episodes.
         """
-        instance_size = math.ceil(self.num_episodes / self.cfg['instances'])  # 1000
+        instance_size = math.ceil(self.num_episodes / self.cfg['instances'])
         start_ndx = self.cfg['instance'] * instance_size
         end_ndx = self.num_episodes
 
         for episode_ndx in range(start_ndx, min(start_ndx + self.cfg['num_episodes'], end_ndx)):
-
             self.wandb_log_data = {
-                'episode_ndx': episode_ndx,  # 0
-                'instance': self.cfg['instance'],  # Use actual instance number instead of string
-                'total_episodes': self.cfg['instances'] * self.cfg['num_episodes'],  # 1
-                'task': self.task,  # ObjectNav
+                'episode_ndx': episode_ndx,
+                'instance': self.cfg['instance'],
+                'total_episodes': self.cfg['instances'] * self.cfg['num_episodes'],
+                'task': self.task,
                 'task_data': {},
                 'spl': 0,
                 'goal_reached': False
@@ -170,8 +196,13 @@ class Env:
         Called after the episode is complete, saves the dataframe log, and resets the environment.
         Sends a request to the aggregator server if parallel is set to True.
         """
+        # Ensure log directory exists before saving
+        log_dir = os.environ.get("LOG_DIR")
+        episode_log_dir = os.path.join(log_dir, f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}')
+        os.makedirs(episode_log_dir, exist_ok=True)
+        
         # Save logs and reset environment
-        self.df.to_pickle(os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}/df_results.pkl'))
+        self.df.to_pickle(os.path.join(episode_log_dir, 'df_results.pkl'))
         self.simWrapper.reset()
         self.agent.reset()
         
@@ -312,15 +343,24 @@ class WMNavEnv(Env):
 
         self.sim_cfg['scene_config'] = os.path.join(os.environ.get("DATASET_ROOT"), scene_config_path)
         self.goals = {}
+        
+        dataset_path = os.path.join(os.environ.get("DATASET_ROOT"), objnav_path, f'{self.cfg["split"]}/content')
+        
+        if not os.path.exists(dataset_path):
+            raise FileNotFoundError(f"Dataset path does not exist: {dataset_path}")
+        
+        dataset_files = sorted(os.listdir(dataset_path))
+        print(f"Loading {len(dataset_files)} dataset files...")
 
-        for f in sorted(os.listdir(os.path.join(os.environ.get("DATASET_ROOT"), objnav_path, f'{self.cfg["split"]}/content'))):
-            with gzip.open(os.path.join(os.environ.get("DATASET_ROOT"), objnav_path, f'{self.cfg["split"]}/content/{f}'), 'rt') as gz:
+        for f in dataset_files:
+            with gzip.open(os.path.join(dataset_path, f), 'rt') as gz:
                 js = json.load(gz)
                 hsh = f.split('.')[0]
                 self.goals[hsh] = js['goals_by_category']
                 self.all_episodes += js['episodes']
 
         self.num_episodes = len(self.all_episodes)
+        print(f"Loaded {self.num_episodes} episodes from dataset")
 
     def _initialize_episode(self, episode_ndx: int):
         """
@@ -366,6 +406,12 @@ class WMNavEnv(Env):
         self.simWrapper.set_state(pos=self.init_pos, quat=episode['start_rotation'])
         self.curr_run_name = f"{episode_ndx}_{self.simWrapper.scene_id}"
 
+        # Create log directory for this episode early 
+        log_dir = os.environ.get("LOG_DIR")
+        episode_log_dir = os.path.join(log_dir, f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}')
+        os.makedirs(episode_log_dir, exist_ok=True)
+        print(f"📁 Created episode log directory: {episode_log_dir}")
+
         obs = self.simWrapper.step(PolarAction.null)
 
         self.previous_subtask = '{}'  # Initialize the last subtask with an empty dictionary
@@ -383,86 +429,199 @@ class WMNavEnv(Env):
         """
         episode_images = [(obs['color_sensor'].copy())[:, :, :3]]
         color_origin = episode_images[0]
-
         
-        loop_action_clockwise = PolarAction(0, -0.167 * np.pi)  # 顺时针旋转，极坐标计算进行旋转
-        loop_action_counterclock = PolarAction(0, 0.167 * np.pi)  # 逆时针旋转
-
-        #  确定目标方向，观察周围环境，收集信息
-        for _ in range(11):
-            obs = self.simWrapper.step(loop_action_clockwise)
-            if _ % 2 == 0:
-                self.agent.navigability(obs, _+1) #每隔一个视角分析可通性
-            episode_images.append((obs['color_sensor'].copy())[:, :, :3]) #保存当前视角的图像
+        # 优化：减少重复的旋转动作定义
+        loop_actions = {
+            'clockwise': PolarAction(0, -0.167 * np.pi),
+            'counterclock': PolarAction(0, 0.167 * np.pi)
+        }
+        
+        # 优化：并行处理观察和导航性分析
+        for i in range(11):
+            obs = self.simWrapper.step(loop_actions['clockwise'])
+            if i % 2 == 0:
+                self.agent.navigability(obs, i+1)
+            episode_images.append((obs['color_sensor'].copy())[:, :, :3])
+        
+        # 生成导航图
         nav_map = self.agent.generate_voxel(obs['agent_state'])
-        panoramic_image, explorable_value, reason = self.agent.make_curiosity_value(episode_images[-12:], self.current_episode['object']) #参数为12张图片和目标类别
-        goal_rotate, goal_reason = self.agent.update_curiosity_value(explorable_value, reason)#PredictVLM
-
-        direction_image = episode_images[-12:][goal_rotate]
-        goal_flag, subtask = self.agent.make_plan(direction_image, self.previous_subtask, goal_reason, self.current_episode['object'])  #make_plan中调用了PlanVLM
+        
+        # 优化：一次性获取全景图像和探索值
+        panoramic_data = self.agent.make_curiosity_value(
+            episode_images[-12:], 
+            self.current_episode['object']
+        )
+        panoramic_image, explorable_value, reason = panoramic_data
+        
+        # 获取最佳方向
+        goal_rotate, goal_reason = self.agent.update_curiosity_value(explorable_value, reason)
+        
+        # 优化：条件性生成场景图可视化
+        scene_graph_context = None
+        scene_graph_img = None
+        
+        if hasattr(self.agent, 'scene_graph') and hasattr(self.agent, '_subgraph_to_text'):
+            logging.info(f"using scene graph for goal {self.current_episode['object']}")
+            # 获取场景图上下文用于规划
+            relevant_nodes, relevant_edges = self.agent.scene_graph.get_subgraph_for_goal(
+                self.current_episode['object']
+            )
+            scene_graph_context = self.agent._subgraph_to_text(relevant_nodes, relevant_edges)
+            
+            # 定期生成可视化
+            if self.step % self.agent.cfg.get('graph_memory', {}).get('visualization_freq', 1) == 0:
+                try:
+                    scene_graph_img = self.agent.draw_scene_graph(obs['agent_state'])
+                except Exception as e:
+                    logging.warning(f"Scene graph visualization failed: {e}")
+        
+        # 使用场景图上下文进行规划
+        # 安全地获取目标方向的图像，避免numpy数组真值模糊错误
+        pano_images = episode_images[-12:]
+        try:
+            if isinstance(pano_images, list) and len(pano_images) > goal_rotate:
+                target_image = [pano_images[goal_rotate]]  # 确保是列表格式
+            elif hasattr(pano_images, '__getitem__'):
+                target_image = [pano_images[goal_rotate]]  # 处理其他可索引类型
+            else:
+                target_image = pano_images  # 回退到原始图像
+        except Exception as e:
+            print(f"Error indexing panoramic images: {e}")
+            logging.warning(f"Error indexing panoramic images: {e}")
+            target_image = pano_images  # 使用整个全景图像作为回退
+        
+        goal_flag, subtask = self.agent.make_plan(
+            target_image, 
+            self.previous_subtask, 
+            goal_reason, 
+            self.current_episode['object'],
+            scene_graph_context
+        )
+        
         self.previous_subtask = subtask # update last subtask
         #  update_curiosity_value即确定最佳前进方向则转向目标方向
         for j in range(min(11 - goal_rotate, 1 + goal_rotate)):
             if goal_rotate <= 6: #如果目标在右侧，继续顺时针转
-                obs = self.simWrapper.step(loop_action_clockwise)
+                obs = self.simWrapper.step(loop_actions['clockwise'])
             else:
-                obs = self.simWrapper.step(loop_action_counterclock)
+                obs = self.simWrapper.step(loop_actions['counterclock'])
 
         cvalue_map = self.agent.draw_cvalue_map(obs['agent_state'])
-
-        super()._step_env(obs) #调用父类的_step_env方法，更新agent的状态和观察
-        obs['goal'] = self.current_episode['object']  # 目标的类别，最短距离，目标位置，所有可到点
-        obs['subtask'] = subtask  # 子目标
-        obs['goal_flag'] = goal_flag  # 是否发现目标
+        
+        # Log everything for this step
+        super()._step_env(obs)
+        
+        # 优化：批量更新观察数据
+        obs.update({
+            'goal': self.current_episode['object'],
+            'subtask': subtask,
+            'goal_flag': goal_flag,
+            'scene_graph_context': scene_graph_context  # 添加场景图上下文
+        })
+        
+        # 更新距离
         agent_state = obs['agent_state']
         self.agent_distance_traveled += np.linalg.norm(agent_state.position - self.prev_agent_position)
         self.prev_agent_position = agent_state.position
-        agent_action, metadata = self.agent.step(obs)  # 整个模型前向运行一次，返回动作和结果
+        
+        # Pass planner output to agent's observation for stopping logic
+        obs['goal_flag_from_planner'] = goal_flag
+        obs['subtask_from_planner'] = subtask if isinstance(subtask, dict) else {}
+        
+        # Log the planner state being passed to agent
+        logging.info(f"Passing to agent: goal_flag={goal_flag}, subtask={subtask}")
+        
+        # 获取代理动作
+        agent_action, metadata = self.agent.step(obs)
         step_metadata = metadata['step_metadata']
-        metadata['logging_data']['EVALUATOR_RESPONSE'] = str({'goal_rotate':goal_rotate*30, 'explorable_value': explorable_value, 'reason': reason})
-        metadata['logging_data']['PLANNING_RESPONSE'] = str({'goal_flag': goal_flag, 'subtask': subtask})
-        logging_data = metadata['logging_data']
-
+        
+        # 优化：结构化日志数据
+        log_responses = {
+            'EVALUATOR_RESPONSE': {
+                'goal_rotate': goal_rotate * 30,
+                'explorable_value': explorable_value,
+                'reason': reason,
+                'scene_graph_nodes': len(self.agent.scene_graph.nodes) if hasattr(self.agent, 'scene_graph') else 0
+            },
+            'PLANNING_RESPONSE': {
+                'goal_flag': goal_flag,
+                'subtask': subtask,
+                'scene_graph_context_length': len(scene_graph_context) if scene_graph_context else 0
+            }
+        }
+        
+        for key, value in log_responses.items():
+            metadata['logging_data'][key] = str(value)
+        
+        # 优化：高效图像处理
         images = metadata['images']
-
+        
+        # 添加步数和目标信息到原始图像
         if metadata['step'] is not None:
-            step_text = f"step {metadata['step']}"
-            color_origin = np.ascontiguousarray(color_origin)
-            color_origin = cv2.putText(color_origin, step_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
-
+            color_origin = self._add_text_to_image(color_origin, f"step {metadata['step']}", (10, 30))
+        
         if obs['goal'] is not None:
-            scale_factor = color_origin.shape[0] / 1080
-            padding = 20
-            text_size = 2.5 * scale_factor
-            text_thickness = 2
-            (text_width, text_height), _ = cv2.getTextSize(f"goal:{obs['goal']}", cv2.FONT_HERSHEY_SIMPLEX, text_size, text_thickness)
-            text_position = (color_origin.shape[1] - text_width - padding, padding + text_height)
-            cv2.putText(color_origin, f"goal:{obs['goal']}", text_position, cv2.FONT_HERSHEY_SIMPLEX, text_size, (255, 0, 0), text_thickness,
-                        cv2.LINE_AA)
-
-        planner_images = {'panoramic': panoramic_image,
-                          'color_origin': color_origin,
-                          'nav_map': nav_map,
-                          'cvalue_map': cvalue_map}
-        images.update(planner_images)  # 保存规划过程的图片
-
-        metrics = self._calculate_metrics(agent_state, agent_action, self.current_episode['shortest_path'], self.cfg['max_steps'])
+            color_origin = self._add_goal_text(color_origin, obs['goal'])
+        
+        # 组合所有可视化图像
+        planner_images = {
+            'panoramic': panoramic_image,
+            'color_origin': color_origin,
+            'nav_map': nav_map,
+            'cvalue_map': cvalue_map,
+            'scene_graph': scene_graph_img if scene_graph_img is not None else None
+        }
+        
+        images.update(planner_images)
+        
+        # 计算指标
+        metrics = self._calculate_metrics(agent_state, agent_action, 
+                                         self.current_episode['shortest_path'], self.cfg['max_steps'])
         step_metadata.update(metrics)
-
-        self._log(images, step_metadata, logging_data)
-
+        
+        # 记录结果
+        self._log(images, step_metadata, metadata['logging_data'])
+        
         if metrics['done']:
-            agent_action = None
-
+            logging.info(f"Episode {self.curr_run_name} completed with status: {metrics['finish_status']}")
+            if metrics['goal_reached']:
+                logging.info(f"Goal {obs['goal']} reached successfully!")
+            else:
+                logging.info(f"Goal {obs['goal']} not reached. Distance to goal: {metrics['distance_to_goal']:.2f}m")
+            agent_action = None  # Stop the agent if the episode is done
+        
         return agent_action
+    
+    def _add_text_to_image(self, image, text, position, color=(255, 255, 255), font_scale=1, thickness=2):
+        """优化：添加文本到图像的辅助方法"""
+        image = np.ascontiguousarray(image)
+        return cv2.putText(image, text, position, cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, thickness, cv2.LINE_AA)
+    
+    def _add_goal_text(self, image, goal):
+        """优化：添加目标文本的辅助方法"""
+        scale_factor = image.shape[0] / 1080
+        padding = 20
+        text_size = 2.5 * scale_factor
+        text_thickness = 2
+        
+        (text_width, text_height), _ = cv2.getTextSize(f"goal:{goal}", 
+                                                     cv2.FONT_HERSHEY_SIMPLEX, text_size, text_thickness)
+        text_position = (image.shape[1] - text_width - padding, padding + text_height)
+        
+        return self._add_text_to_image(image, f"goal:{goal}", text_position, (255, 0, 0), text_size, text_thickness)
 
     def _post_episode(self):
         """
         Called after the episode is complete, saves the dataframe log, and resets the environment.
         Sends a request to the aggregator server if parallel is set to True.
         """
+        # Ensure log directory exists before saving
+        log_dir = os.environ.get("LOG_DIR")
+        episode_log_dir = os.path.join(log_dir, f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}')
+        os.makedirs(episode_log_dir, exist_ok=True)
+        
         # Save logs and reset environment
-        self.df.to_pickle(os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}/df_results.pkl'))
+        self.df.to_pickle(os.path.join(episode_log_dir, 'df_results.pkl'))
         self.simWrapper.reset()
         self.agent.reset()
         

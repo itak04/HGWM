@@ -6,8 +6,13 @@ import numpy as np
 import cv2
 import ast
 import concurrent.futures
+import json
+import re
+from typing import Dict, List, Any  # Add missing typing imports
 
 from simWrapper import PolarAction
+from utils import *
+from api import *
 from utils import *
 from api import *
 
@@ -758,7 +763,7 @@ class WMNavAgent(VLMNavAgent):
             current_position = np.array([agent_state.position[0], agent_state.position[2]])
             goal_position = np.array([avg_goal_position[0], avg_goal_position[2]])
             dist = np.linalg.norm(current_position - goal_position)
-
+            logging.info(f'Current position: {current_position}, Goal position: {goal_position}, Distance: {dist}')
             if dist < threshold_dist:
                 return True
         return False
@@ -768,10 +773,11 @@ class WMNavAgent(VLMNavAgent):
         """Concurrently runs the stopping thread to determine if the agent should stop, and the preprocessing thread to calculate potential actions."""
         called_stop = False
         with concurrent.futures.ThreadPoolExecutor() as executor:
+            logging.info('Starting preprocessing and stopping threads')
             preprocessing_thread = executor.submit(self._preprocessing_module, obs)
             stopping_thread = executor.submit(self._stopping_module, obs)
 
-            a_final, images, a_goal, candidate_images = preprocessing_thread.result()
+            a_final, images, a_goal, candidate_images = preprocessing_thread.result() #a_goal is the goal image
             called_stop = stopping_thread.result()
 
         if called_stop:
@@ -1056,6 +1062,7 @@ class WMNavAgent(VLMNavAgent):
             resolution=self.resolution, focal_length=self.focal_length
         )  # agent的原点在图像坐标系的位置（像素）
 
+        # Generate initial actions
         a_initial = []
         for theta_i in all_thetas:
             r_i, theta_i = self._get_radial_distance(start, theta_i, navigability_mask, agent_state, sensor_state, depth_image)
@@ -1067,7 +1074,7 @@ class WMNavAgent(VLMNavAgent):
                 a_initial.append((r_i, theta_i))
 
         # draw explored circle
-        if self.cfg['panoramic_padding'] == True:
+        if self.cfg['panoramic_padding'] == True and a_initial:
             r_max, theta_max = max(a_initial, key=lambda x: x[0])
             self._update_panoramic_voxel(r_max, theta_max, agent_state,
                     clip_dist=self.cfg['max_action_dist'], clip_frac=self.e_i_scaling)
@@ -1197,31 +1204,260 @@ class WMNavAgent(VLMNavAgent):
         return agent_action, metadata
 
     def _eval_response(self, response: str):
-        """Converts the VLM response string into a dictionary, if possible"""
+        """
+        SOTA级别的VLM响应解析器 - 高效、鲁棒、无冗余
+        """
         import re
-        result = re.sub(r"(?<=[a-zA-Z])'(?=[a-zA-Z])", "\\'", response)
-        try:
-            eval_resp = ast.literal_eval(result[result.index('{') + 1:result.rindex('}')]) # {{}}
-            if isinstance(eval_resp, dict):
-                return eval_resp
-        except:
+        import json
+        from typing import Dict, Any
+        
+        if not response or not isinstance(response, str):
+            return self._get_default_response()
+        
+        # 预处理：移除多余空白和markdown标记
+        response = response.strip()
+        
+        # 一次性移除所有可能的markdown标记
+        markdown_patterns = [
+            (r'```json\s*', ''),
+            (r'```\s*$', ''),
+            (r'^```\s*', ''),
+            (r'`{1,3}', ''),
+        ]
+        
+        for pattern, replacement in markdown_patterns:
+            response = re.sub(pattern, replacement, response, flags=re.MULTILINE)
+        
+        response = response.strip()
+        
+        # 快速路径：如果是标准JSON格式，直接解析
+        if response.startswith('{') and response.endswith('}'):
             try:
-                eval_resp = ast.literal_eval(result[result.rindex('{'):result.rindex('}') + 1]) # {}
-                if isinstance(eval_resp, dict):
-                    return eval_resp
-            except:
-                try:
-                    eval_resp = ast.literal_eval(result[result.index('{'):result.rindex('}')+1]) # {{}, {}}
-                    if isinstance(eval_resp, dict):
-                        return eval_resp
-                except:
-                    logging.error(f'Error parsing response {response}')
-                    return {}
+                result = json.loads(response)
+                if isinstance(result, dict) and result:
+                    return self._validate_and_fix_response(result)
+            except json.JSONDecodeError:
+                pass  # 继续尝试其他方法
+        
+        # 智能JSON提取 - 处理嵌套和不完整的JSON
+        json_candidates = self._extract_json_candidates(response)
+        
+        for candidate in json_candidates:
+            try:
+                # 尝试修复常见的JSON格式问题
+                fixed_candidate = self._fix_common_json_issues(candidate)
+                result = json.loads(fixed_candidate)
+                
+                if isinstance(result, dict) and result:
+                    return self._validate_and_fix_response(result)
+                    
+            except (json.JSONDecodeError, ValueError):
+                continue
+        
+        # 如果JSON解析失败，尝试提取关键信息
+        extracted_info = self._extract_key_info_from_text(response)
+        if extracted_info:
+            return extracted_info
+        
+        # 最后的fallback
+        logging.warning(f"Failed to parse VLM response, using default. Response preview: {response[:100]}...")
+        return self._get_default_response()
+    
+    def _extract_json_candidates(self, text: str) -> list:
+        """提取可能的JSON候选对象"""
+        candidates = []
+        
+        # 模式1：标准的大括号JSON
+        json_pattern = r'\{(?:[^{}]|{[^{}]*})*\}'
+        matches = re.findall(json_pattern, text, re.DOTALL)
+        candidates.extend(matches)
+        
+        # 模式2：查找包含引号的键值对结构
+        kv_pattern = r'\{[^{}]*["\'][^"\']*["\'][^{}]*:[^{}]*\}'
+        kv_matches = re.findall(kv_pattern, text, re.DOTALL)
+        candidates.extend(kv_matches)
+        
+        # 模式3：处理截断的JSON（尝试补全）
+        incomplete_pattern = r'\{[^{}]*["\'][^"\']*["\'][^{}]*:'
+        incomplete_matches = re.findall(incomplete_pattern, text)
+        for match in incomplete_matches:
+            # 尝试简单补全
+            if not match.endswith('}'):
+                candidates.append(match + ' 1}')  # 假设是数值类型
+        
+        # 按长度排序，优先尝试更完整的JSON
+        return sorted(set(candidates), key=len, reverse=True)
+    
+    def _fix_common_json_issues(self, json_str: str) -> str:
+        """修复常见的JSON格式问题"""
+        # 替换Python风格的布尔值
+        json_str = re.sub(r'\bTrue\b', 'true', json_str)
+        json_str = re.sub(r'\bFalse\b', 'false', json_str)
+        json_str = re.sub(r'\bNone\b', 'null', json_str)
+        
+        # 修复单引号
+        json_str = re.sub(r"'([^']*)':", r'"\1":', json_str)
+        json_str = re.sub(r":\s*'([^']*)'", r': "\1"', json_str)
+        
+        # 修复尾随逗号
+        json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
+        
+        # 修复缺少引号的键
+        json_str = re.sub(r'([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', json_str)
+        
+        return json_str
+    
+    def _validate_and_fix_response(self, response_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """验证并修复响应字典的格式"""
+        
+        # 对于predicting模块的响应
+        if all(k.isdigit() for k in response_dict.keys()):
+            fixed_response = {}
+            for angle, content in response_dict.items():
+                if isinstance(content, dict):
+                    # 确保包含必要的字段
+                    fixed_content = {
+                        'Thought': content.get('Thought', content.get('thought', 'No detailed observation')),
+                        'Score': self._extract_score(content)
+                    }
+                    fixed_response[angle] = fixed_content
+                else:
+                    # 如果内容不是字典，尝试提取分数
+                    score = self._extract_score_from_any(content)
+                    fixed_response[angle] = {
+                        'Thought': 'Simplified observation',
+                        'Score': score
+                    }
+            return fixed_response
+        
+        # 对于planning模块的响应
+        if 'Flag' in response_dict or 'flag' in response_dict:
+            return {
+                'Flag': response_dict.get('Flag', response_dict.get('flag', False)),
+                'Subtask': response_dict.get('Subtask', response_dict.get('subtask', '{}'))
+            }
+        
+        # 对于action模块的响应
+        if 'action' in response_dict or 'Action' in response_dict:
+            action_value = response_dict.get('action', response_dict.get('Action', 1))
+            return {'action': self._ensure_valid_action(action_value)}
+        
+        return response_dict
+    
+    def _extract_score(self, content: Any) -> int:
+        """从内容中提取有效的分数"""
+        if isinstance(content, dict):
+            score = content.get('Score', content.get('score', content.get('value', 1)))
+        else:
+            score = content
+        
+        try:
+            score_int = int(float(score))
+            return max(0, min(10, score_int))  # 限制在0-10范围内
+        except (ValueError, TypeError):
+            return 1  # 默认分数
+    
+    def _extract_score_from_any(self, content: Any) -> int:
+        """从任意内容中提取分数"""
+        if isinstance(content, (int, float)):
+            return max(0, min(10, int(content)))
+        
+        if isinstance(content, str):
+            # 查找数字
+            numbers = re.findall(r'\b([0-9]|10)\b', content)
+            if numbers:
+                return int(numbers[-1])  # 取最后一个数字
+        
+        return 1
+    
+    def _extract_key_info_from_text(self, text: str) -> Dict[str, Any]:
+        """从纯文本中提取关键信息"""
+        text_lower = text.lower()
+        
+        # 检查是否是planning模块的响应
+        planning_indicators = ['flag', 'subtask', 'goal', 'found', 'bed', 'standing in front', 'very close']
+        if any(indicator in text_lower for indicator in planning_indicators):
+            # 检查目标是否找到的强指示词
+            strong_goal_indicators = [
+                'found', 'see the', 'visible', 'in front of', 'clearly visible', 
+                'very close', 'standing in front', 'reached', 'arrived at',
+                'can see the', 'there is a', 'bed is', 'target is', 'close to','goal is', 'goal found', 'goal detected'
+            ]
+            goal_found = any(indicator in text_lower for indicator in strong_goal_indicators)
+            
+            if goal_found:
+                logging.info(f"✅ GOAL DETECTED in text: '{text[:100]}...'")
+                print(f"✅ GOAL DETECTED in text: '{text[:100]}...'")
+                return {
+                    'Flag': True,
+                    'Subtask': {}  # 空subtask表示应该停止
+                }
+            else:
+                logging.info(f"Goal not detected in planning text: '{text[:100]}...'")
+                return {
+                    'Flag': False, 
+                    'Subtask': {}
+                }
+        
+        # 查找action关键词
+        action_patterns = [
+            r'action["\s:]*(\d+)',
+            r'choose["\s:]*(\d+)',
+            r'select["\s:]*(\d+)',
+            r'go["\s:]*(\d+)',
+        ]
+        
+        for pattern in action_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                action_num = int(match.group(1))
+                return {'action': self._ensure_valid_action(action_num)}
+        
+        # 查找方向性描述
+        directions = {
+            'forward': 1, 'ahead': 1, 'straight': 1,
+            'left': 2, 'right': 3, 'back': 0, 'turn': 0
+        }
+        
+        for direction, action in directions.items():
+            if direction in text_lower:
+                return {'action': action}
+        
+        return None
+    
+    def _ensure_valid_action(self, action: Any) -> int:
+        """确保动作值有效"""
+        try:
+            action_int = int(action)
+            return max(0, min(10, action_int))  # 限制在合理范围内
+        except (ValueError, TypeError):
+            return 1
+    
+    def _get_default_response(self) -> Dict[str, Any]:
+        """根据上下文返回默认响应"""
+        # 检查当前是哪个模块在调用
+        import inspect
+        caller_name = inspect.stack()[2].function
+        
+        if 'predicting' in caller_name:
+            # 为predicting模块返回默认的方向评分
+            return {
+                '30': {'Thought': 'Default exploration direction', 'Score': 5},
+                '90': {'Thought': 'Default exploration direction', 'Score': 5},
+                '150': {'Thought': 'Default exploration direction', 'Score': 5},
+                '210': {'Thought': 'Default exploration direction', 'Score': 5},
+                '270': {'Thought': 'Default exploration direction', 'Score': 5},
+                '330': {'Thought': 'Default exploration direction', 'Score': 5},
+            }
+        elif 'planning' in caller_name:
+            return {'Flag': False, 'Subtask': '{}'}
+        else:
+            return {'action': 1}
 
-    def _planning_module(self, planning_image: list[np.array], previous_subtask, goal_reason: str, goal):
+    def _planning_module(self, planning_image: list[np.array], previous_subtask, goal_reason: str, goal, scene_graph_context=None):
         """Determines if the agent should stop."""
         try:
-            planning_prompt = self._construct_prompt(goal, 'planning', previous_subtask, goal_reason)
+            planning_prompt = self._construct_prompt(goal, 'planning', previous_subtask, goal_reason, scene_graph_context=scene_graph_context)
             planning_response = self.PlanVLM.call([planning_image], planning_prompt)
             
             # 添加调试信息
@@ -1275,19 +1511,29 @@ class WMNavAgent(VLMNavAgent):
     def make_curiosity_value(self, pano_images, goal):
         angles = (np.arange(len(pano_images))) * 30
         inference_image = self._concat_panoramic(pano_images, angles) # Concatenate panoramic images for inference
-
+    
         response = self._predicting_module(inference_image, goal)
-
+    
         explorable_value = {}
         reason = {}
-
+        thoughts = {}
+    
         try:
             for angle, values in response.items():
                 explorable_value[angle] = values['Score']
-                reason[angle] = values['Explanation']
+                # Store both the structured thought and the legacy reason field
+                thoughts[angle] = values.get('Thought', '')
+                # For backward compatibility, extract a simple reason from the thought or use the raw explanation
+                if 'Thought' in values: #将每个角度的思考存储在字典中
+                    reason[angle] = f"Direction {angle}° reasoning: {values['Thought']}"
+                else:
+                    reason[angle] = values.get('Explanation', '')
         except:
-            explorable_value, reason = None, None
-
+            explorable_value, reason, thoughts = None, None, None
+    
+        # Store the structured thoughts in the agent's memory for future reference
+        self.direction_thoughts = thoughts if thoughts else {}
+        
         return inference_image, explorable_value, reason
 
     @staticmethod
@@ -1315,7 +1561,7 @@ class WMNavAgent(VLMNavAgent):
                     continue
                 self.cvalue_map[intersection2] = self._merge_evalue(self.cvalue_map[intersection2], (explorable_value[angle] + explorable_value[next_angle]) / 2)  # update explorable value map
             if self.goal_mask is not None:
-                self.cvalue_map[self.goal_mask] = 10.0
+                               self.cvalue_map[self.goal_mask] = 10.0
             for i in range(12):
                 if i % 2 == 0:
                     continue
@@ -1359,11 +1605,12 @@ class WMNavAgent(VLMNavAgent):
 
         return zoomed_map
 
-    def make_plan(self, pano_images, previous_subtask, goal_reason, goal):
+    def make_plan(self, pano_images, previous_subtask, goal_reason, goal, scene_graph_context=None):
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                response = self._planning_module(pano_images, previous_subtask, goal_reason, goal)
+                logging.info(f"scene_graph_context: {scene_graph_context}")
+                response = self._planning_module(pano_images, previous_subtask, goal_reason, goal, scene_graph_context)
                 
                 if response and 'Flag' in response and 'Subtask' in response:
                     goal_flag, subtask = response['Flag'], response['Subtask']
@@ -1382,55 +1629,62 @@ class WMNavAgent(VLMNavAgent):
         print("All planning attempts failed, using default values")
         return False, '{}'
 
-    def _construct_prompt(self, goal: str, prompt_type:str, subtask: str='{}', reason: str='{}', num_actions: int=0):
+
+    def _construct_prompt(self, goal: str, prompt_type:str, subtask: str='{}', reason: str='{}', num_actions: int=0, scene_graph_context: str=None):
         if prompt_type == 'goal':
-            location_prompt = (f"The agent has been tasked with navigating to a {goal.upper()}. The agent has sent you an image taken from its current location. "
-            f"There are {num_actions} red arrows superimposed onto your observation, which represent potential positions. " 
-            f"These are labeled with a number in a white circle, which represent the location you can move to. "
-            f"First, tell me whether the {goal} is in the image, and make sure the object you see is ACTUALLY a {goal}, return number 0 if if there is no {goal}, or if you are not sure. Note a chair must have a backrest and a chair is not a stool. Note a chair is NOT sofa(couch) which is NOT a bed. "
-            f'Second, if there is {goal} in the image, then determine which circle best represents the location of the {goal}(close enough to the target. If a person is standing in that position, they can easily touch the {goal}), and give the number and a reason. '
-            f'If none of the circles represent the position of the {goal}, return number 0, and give a reason why you returned 0. '
-            "Format your answer in the json {{'Number': <The number you choose>}}")
-            return location_prompt
-        if prompt_type == 'predicting':
+            goal_prompt = (
+                f"TASK: NAVIGATE TO THE NEAREST {goal.upper()}, and get as close to it as possible. "
+                f"When you see the {goal.upper()}, just say 'DONE' since I'll know to stop. "
+                f"Otherwise, tell me what you can see and what you think we should do next, and then return a number from 0 to 10 indicating whether we are at the {goal.upper()}. "
+                f"0 means we are not at the {goal.upper()}, and 10 means we are at the {goal.upper()}. "
+                f"Note that a chair must have a backrest, while a stool is backless. "
+                f"For clarity, note that a chair is NOT a sofa/couch, which is NOT a bed."
+            )
+            return goal_prompt
+        elif prompt_type == 'predicting':
             evaluator_prompt = (f"The agent has been tasked with navigating to a {goal.upper()}. The agent has sent you the panoramic image describing your surrounding environment, each image contains a label indicating the relative rotation angle(30, 90, 150, 210, 270, 330) with red fonts. "
             f'Your job is to assign a score to each direction (ranging from 0 to 10), judging whether this direction is worth exploring. The following criteria should be used: '
-            f'To help you describe the layout of your surrounding,  please follow my step-by-step instructions: '
+            f'To help you describe the layout of your surrounding, please follow my step-by-step instructions: '
             f'(1) If there is no visible way to move to other areas and it is clear that the target is not in sight, assign a score of 0. Note a chair must have a backrest and a chair is not a stool. Note a chair is NOT sofa(couch) which is NOT a bed. '
             f'(2) If the {goal} is found, assign a score of 10.  ' 
             f'(3) If there is a way to move to another area, assign a score based on your estimate of the likelihood of finding a {goal}, using your common sense. Moving to another area means there is a turn in the corner, an open door, a hallway, etc. Note you CANNOT GO THROUGH CLOSED DOORS. CLOSED DOORS and GOING UP OR DOWN STAIRS are not considered. '
-            "For each direction, provide an explanation for your assigned score. Format your answer in the json {'30': {'Score': <The score(from 0 to 10) of angle 30>, 'Explanation': <An explanation for your assigned score.>}, '90': {...}, '150': {...}, '210': {...}, '270': {...}, '330': {...}}. "
-            "Answer Example: {'30': {'Score': 0, 'Explanation': 'Dead end with a recliner. No sign of a bed or any other room.'}, '90': {'Score': 2, 'Explanation': 'Dining area. It is possible there is a doorway leading to other rooms, but bedrooms are less likely to be directly adjacent to dining areas.'}, ..., '330': {'Score': 2, 'Explanation': 'Living room area with a recliner.  Similar to 270, there is a possibility of other rooms, but no strong indication of a bedroom.'}}")
+            
+            f"For each direction, provide a structured thought process and a final score. The thought process should include: "
+            f"<Observation>: A brief description of what is seen in this direction. "
+            f"<Spatial Reasoning>: Your reasoning about the space, object relationships, and what this area might lead to based on common sense. "
+            f"<Task Planning>: A comment on whether exploring this direction aligns with the goal of finding a {goal.upper()}. "
+            
+            f"Format your answer in the json {{'30': {{'Thought': '<Observation>...</Observation> <Spatial Reasoning>...</Spatial Reasoning> <Task Planning>...</Task Planning>', 'Score': <score>}}, '90': {{...}}, '150': {{...}}, '210': {{...}}, '270': {{...}}, '330': {{...}}}}. "
+            
+            f"Answer Example: {{'90': {{'Thought': '<Observation>A dining area with a table and chairs.</Observation> <Spatial Reasoning>Dining areas are often connected to living rooms or kitchens. It is less common but possible for them to be adjacent to a bedroom hallway.</Spatial Reasoning> <Task Planning>This is a potential path, but not a high-priority one for finding a bed.</Task Planning>', 'Score': 2}}, '150': {{'Thought': '<Observation>A hallway with several doors visible.</Observation> <Spatial Reasoning>Hallways typically lead to bedrooms in residential settings.</Spatial Reasoning> <Task Planning>This direction has a high probability of leading to a bedroom and should be prioritized.</Task Planning>', 'Score': 8}}}}")
             return evaluator_prompt
-        if prompt_type == 'planning':
-            if reason != '' and subtask != '{}':
-                planning_prompt = (f"The agent has been tasked with navigating to a {goal.upper()}. The agent has sent you the following elements:"
-                f"(1)<The observed image>: The image taken from its current location. "
-                f"(2){reason}. This explains why you should go in this direction. "
-                f'Your job is to describe next place to go. '
-                f'To help you plan your best next step, I can give you some human suggestions:. '
-                f'(1) If the {goal} appears in the image, directly choose the target as the next step in the plan. Note a chair must have a backrest and a chair is not a stool. Note a chair is NOT sofa(couch) which is NOT a bed. '
-                f'(2) If the {goal} is not found and the previous subtask {subtask} has not completed, continue to complete the last subtask {subtask} that has not been completed.'
-                f'(3) If the {goal} is not found and the previous subtask {subtask} has already been completed. Identify a new subtask by describing where you are going next to be more likely to find clues to the the {goal} and think about whether the {goal} is likely to occur in that direction. Note you need to pay special attention to open doors and hallways, as they can lead to other unseen rooms. Note GOING UP OR DOWN STAIRS is an option. '
-                "Format your answer in the json {{'Subtask': <Where you are going next>, 'Flag': <Whether the target is in your view, True or False>}}. "
-                "Answer Example: {{'Subtask': 'Go to the hallway', 'Flag': False}} or {{'Subtask': "+f"'Go to the {goal}'"+", 'Flag': True}} or {{'Subtask': 'Go to the open door', 'Flag': True}}")
-            else:
-                planning_prompt = (f"The agent has been tasked with navigating to a {goal.upper()}. The agent has sent you an image taken from its current location."
-                f'Your job is to describe next place to go. '
-                f'To help you plan your best next step, I can give you some human suggestions:. '
-                f'(1) If the {goal} appears in the image, directly choose the target as the next step in the plan. Note a chair must have a backrest and a chair is not a stool. Note a chair is NOT sofa(couch) which is NOT a bed. '
-                f'(2) If the {goal} is not found, describe where you are going next to be more likely to find clues to the the {goal} and analyze the room type and think about whether the {goal} is likely to occur in that direction. Note you need to pay special attention to open doors and hallways, as they can lead to other unseen rooms. Note GOING UP OR DOWN STAIRS is an option. '
-                "Format your answer in the json {{'Subtask': <Where you are going next>, 'Flag': <Whether the target is in your view, True or False>}}. "
-                "Answer Example: {{'Subtask': 'Go to the hallway', 'Flag': False}} or {{'Subtask': "+f"'Go to the {goal}'"+", 'Flag': True}} or {{'Subtask': 'Go to the open door', 'Flag': True}}")
+        
+        elif prompt_type == 'planning':
+            # Add the scene graph context to the planning prompt if available
+            scene_memory = ""
+            if scene_graph_context:
+                scene_memory = f"\n\nMemory from exploring the environment:\n{scene_graph_context}\n"
+                
+            planning_prompt = (f"TASK: NAVIGATE TO THE {goal.upper()}. "
+                              f"{scene_memory}"
+                              f"Previous subtask: {subtask}. "
+                              f"Your current observation: {reason}. "
+                              f"Should I continue with the previous subtask or create a new one? If I should create a new one, what should it be? "
+                              f"Return a json object with two keys: 'Flag' and 'Subtask'. 'Flag' should be true if I found the {goal} or I'm certain it's in my current view, and false otherwise. 'Subtask' should be an empty dictionary {{}} if I should continue with my previous subtask, or a json containing specific instructions otherwise."
+                              f"Example 1: {{'Flag': false, 'Subtask': {{}}}} (continue with previous subtask) "
+                              f"Example 2: {{'Flag': false, 'Subtask': {{\"action\": \"explore the hallway\"}}}} (new subtask) "
+                              f"Example 3: {{'Flag': true, 'Subtask': {{\"action\": \"approach the {goal}\"}}}} (found the goal)")
             return planning_prompt
-        if prompt_type == 'action':
+        
+        elif prompt_type == 'action':
             if subtask != '{}':
                 action_prompt = (
-                f"TASK: {subtask}. Your final task is to NAVIGATE TO THE NEAREST {goal.upper()}, and get as close to it as possible. "
-                f"There are {num_actions - 1} red arrows superimposed onto your observation, which represent potential actions. " 
-                f"These are labeled with a number in a white circle, which represent the location you would move to if you took that action. {'NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. ' if self.step_ndx - self.turned >= self.cfg['turn_around_cooldown'] else ''}"
-                f"In order to complete the subtask {subtask} and eventually the final task NAVIGATING TO THE NEAREST {goal.upper()}. Explain which action acheives that best. "
-                "Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS"
+                    f"TASK: NAVIGATE TO THE NEAREST {goal.upper()}, and get as close to it as possible. "
+                    f"SUBTASK: {subtask} "
+                    f"There are {num_actions - 1} red arrows superimposed onto your observation, which represent potential actions. "
+                    f"These are labeled with a number in a white circle, which represent the location you would move to if you took that action. {'NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. ' if self.step_ndx - self.turned >= self.cfg['turn_around_cooldown'] else ''}"
+                    f"First, tell me what you see in your sensor observation, and if you have any leads on finding the {goal.upper()}. Second, tell me which action would best help you achieve the SUBTASK. "
+                    "Lastly, explain which action acheives that best, and return it as {'action': <action_key>}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS"
                 )
             else:
                 action_prompt = (
@@ -1438,8 +1692,8 @@ class WMNavAgent(VLMNavAgent):
                     f"There are {num_actions - 1} red arrows superimposed onto your observation, which represent potential actions. "
                     f"These are labeled with a number in a white circle, which represent the location you would move to if you took that action. {'NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. ' if self.step_ndx - self.turned >= self.cfg['turn_around_cooldown'] else ''}"
                     f"First, tell me what you see in your sensor observation, and if you have any leads on finding the {goal.upper()}. Second, tell me which general direction you should go in. "
-                    "Lastly, explain which action acheives that best, and return it as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS"
+                    "Lastly, explain which action acheives that best, and return it as {'action': <action_key>}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS"
                 )
             return action_prompt
-
+    
         raise ValueError('Prompt type must be goal, predicting, planning, or action')

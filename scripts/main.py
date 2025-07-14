@@ -53,6 +53,7 @@ def main():
         config['env_cfg']['parallel'] = True
     if args.dataset:
         config['env_cfg']['dataset'] = args.dataset
+    
     env_cls = globals()[config['env_cls']]
     env = env_cls(cfg=config)
     env.run_experiment()

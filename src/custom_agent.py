@@ -11,6 +11,7 @@ from simWrapper import PolarAction
 from utils import *
 from api import *
 from WMNav_agent import *
+from graph_memory_agent import *
 
 class a(VLMNavAgent):
     def _initialize_vlms(self, cfg: dict):
@@ -3212,3 +3213,9 @@ class CustomAgent(VLMNavAgent):
             return action_prompt
 
         raise ValueError('Prompt type must be goal, predicting, planning, or action')
+    
+    
+
+from graph_memory_agent import GraphMemoryAgent
+WGNav = GraphMemoryAgent
+globals()['WGNav'] = GraphMemoryAgent

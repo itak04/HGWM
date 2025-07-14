@@ -4,19 +4,20 @@
 ROOT_DIR=/home/ps/dqf/GoalNav/WMNavigation
 CONDA_PATH=/home/ps/anaconda3/etc/profile.d/conda.sh
 NUM_GPU=1
-INSTANCES=10
-NUM_EPISODES_PER_INSTANCE=40
-MAX_STEPS_PER_EPISODE=40
+INSTANCES=1
+NUM_EPISODES_PER_INSTANCE=1
+MAX_STEPS_PER_EPISODE=20
 TASK="ObjectNav"
 DATASET="hm3d_v0.1"
-CFG="WMNav"
-NAME="wmnav-qwen2_5vl-7b-instruct-hm3dv1-testAggregator"
+# In parallel.sh, update these variables
+CFG="WGNav"  # Changed from WMNav to WGNav
+NAME="wgnav-stop-test"  # Updated name
 PROJECT_NAME="WMNav"
 VENV_NAME="wmnav"
 GPU_LIST=(0)
 SLEEP_INTERVAL=200
 LOG_FREQ=1
-PORT=20001
+PORT=20002
 
 # 只为 wandb 设置代理
 export WANDB_HTTP_PROXY=socks5://127.0.0.1:7897
@@ -99,7 +100,9 @@ done
 
 # Enhanced Monitor Loop
 echo "开始监控实例..."
-echo "预期总运行时间: 大约 $((NUM_EPISODES_PER_INSTANCE * MAX_STEPS_PER_EPISODE * 25 / 60)) 分钟"
+TOTAL_EPISODES=$((INSTANCES * NUM_EPISODES_PER_INSTANCE))
+echo "总配置: ${INSTANCES}个实例，每个${NUM_EPISODES_PER_INSTANCE}集，总共${TOTAL_EPISODES}集"
+echo "预期总运行时间: 大约 $((NUM_EPISODES_PER_INSTANCE * MAX_STEPS_PER_EPISODE * 15 / 60)) 分钟"
 
 MONITOR_COUNT=0
 CONSECUTIVE_ALL_DONE=0  # 连续检测到完成的次数
