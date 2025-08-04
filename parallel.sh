@@ -4,20 +4,20 @@
 ROOT_DIR=/home/ps/dqf/GoalNav/WMNavigation
 CONDA_PATH=/home/ps/anaconda3/etc/profile.d/conda.sh
 NUM_GPU=1
-INSTANCES=1
-NUM_EPISODES_PER_INSTANCE=1
+INSTANCES=5
+NUM_EPISODES_PER_INSTANCE=80
 MAX_STEPS_PER_EPISODE=20
 TASK="ObjectNav"
 DATASET="hm3d_v0.1"
 # In parallel.sh, update these variables
-CFG="WGNav"  # Changed from WMNav to WGNav
-NAME="wgnav-stop-test"  # Updated name
-PROJECT_NAME="WMNav"
+CFG="CoTGNav"  # Changed from WGNav to CoTGNav
+NAME="cotgraph_test"  # Simplified name for tmux compatibility
+PROJECT_NAME="CoTGNav"
 VENV_NAME="wmnav"
 GPU_LIST=(0)
 SLEEP_INTERVAL=200
 LOG_FREQ=1
-PORT=20002
+PORT=20001
 
 # 只为 wandb 设置代理
 export WANDB_HTTP_PROXY=socks5://127.0.0.1:7897

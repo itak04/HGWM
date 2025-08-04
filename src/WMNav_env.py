@@ -419,176 +419,156 @@ class WMNavEnv(Env):
 
     def _step_env(self, obs: dict):
         """
-        Takes a step in the environment for the BASEV1 task.
-
-        Args:
-            obs (dict): The current observation.
-
-        Returns:
-            list: The next action to be taken by the agent.
+        Optimized step environment for CoTGraphAgent.
+        Simplified panoramic navigation with CoT-based directional analysis.
         """
         episode_images = [(obs['color_sensor'].copy())[:, :, :3]]
         color_origin = episode_images[0]
         
-        # 优化：减少重复的旋转动作定义
+        # Rotation actions for panoramic view
         loop_actions = {
             'clockwise': PolarAction(0, -0.167 * np.pi),
             'counterclock': PolarAction(0, 0.167 * np.pi)
         }
         
-        # 优化：并行处理观察和导航性分析
+        # Collect panoramic images (12 views: 0°, 30°, 60°, ..., 330°)
         for i in range(11):
             obs = self.simWrapper.step(loop_actions['clockwise'])
+            # For CoTGraphAgent, only update navigability for key directions
             if i % 2 == 0:
                 self.agent.navigability(obs, i+1)
             episode_images.append((obs['color_sensor'].copy())[:, :, :3])
         
-        # 生成导航图
+        # Generate navigation map
         nav_map = self.agent.generate_voxel(obs['agent_state'])
         
-        # 优化：一次性获取全景图像和探索值
+        # CoT-based panoramic analysis
+        print(f"\n🎯 Starting CoT Panoramic Analysis for goal: {self.current_episode['object']}")
         panoramic_data = self.agent.make_curiosity_value(
-            episode_images[-12:], 
+            episode_images[-12:],  # Use all 12 panoramic images
             self.current_episode['object']
         )
         panoramic_image, explorable_value, reason = panoramic_data
         
-        # 获取最佳方向
+        # Determine best direction using CoT analysis
         goal_rotate, goal_reason = self.agent.update_curiosity_value(explorable_value, reason)
         
-        # 优化：条件性生成场景图可视化
-        scene_graph_context = None
-        scene_graph_img = None
+        print(f"🔄 CoT Analysis - Optimal Direction: {goal_rotate * 30}°")
         
-        if hasattr(self.agent, 'scene_graph') and hasattr(self.agent, '_subgraph_to_text'):
-            logging.info(f"using scene graph for goal {self.current_episode['object']}")
-            # 获取场景图上下文用于规划
-            relevant_nodes, relevant_edges = self.agent.scene_graph.get_subgraph_for_goal(
-                self.current_episode['object']
-            )
-            scene_graph_context = self.agent._subgraph_to_text(relevant_nodes, relevant_edges)
-            
-            # 定期生成可视化
-            if self.step % self.agent.cfg.get('graph_memory', {}).get('visualization_freq', 1) == 0:
-                try:
-                    scene_graph_img = self.agent.draw_scene_graph(obs['agent_state'])
-                except Exception as e:
-                    logging.warning(f"Scene graph visualization failed: {e}")
-        
-        # 使用场景图上下文进行规划
-        # 安全地获取目标方向的图像，避免numpy数组真值模糊错误
+        # CoT-based planning
         pano_images = episode_images[-12:]
         try:
+            # For CoTGraphAgent, use the optimal direction image for planning
             if isinstance(pano_images, list) and len(pano_images) > goal_rotate:
-                target_image = [pano_images[goal_rotate]]  # 确保是列表格式
-            elif hasattr(pano_images, '__getitem__'):
-                target_image = [pano_images[goal_rotate]]  # 处理其他可索引类型
+                target_image = [pano_images[goal_rotate]]
             else:
-                target_image = pano_images  # 回退到原始图像
+                target_image = pano_images
         except Exception as e:
-            print(f"Error indexing panoramic images: {e}")
-            logging.warning(f"Error indexing panoramic images: {e}")
-            target_image = pano_images  # 使用整个全景图像作为回退
+            logging.warning(f"Error selecting target image: {e}")
+            target_image = pano_images
         
+        # Enhanced planning with CoT reasoning
         goal_flag, subtask = self.agent.make_plan(
             target_image, 
             self.previous_subtask, 
             goal_reason, 
-            self.current_episode['object'],
-            scene_graph_context
+            self.current_episode['object']
         )
         
-        self.previous_subtask = subtask # update last subtask
-        #  update_curiosity_value即确定最佳前进方向则转向目标方向
+        self.previous_subtask = subtask
+        
+        # Rotate to target direction
         for j in range(min(11 - goal_rotate, 1 + goal_rotate)):
-            if goal_rotate <= 6: #如果目标在右侧，继续顺时针转
+            if goal_rotate <= 6:
                 obs = self.simWrapper.step(loop_actions['clockwise'])
             else:
                 obs = self.simWrapper.step(loop_actions['counterclock'])
 
+        # Generate curiosity value map
         cvalue_map = self.agent.draw_cvalue_map(obs['agent_state'])
         
-        # Log everything for this step
+        # Update observation with CoT context
         super()._step_env(obs)
-        
-        # 优化：批量更新观察数据
         obs.update({
             'goal': self.current_episode['object'],
             'subtask': subtask,
-            'goal_flag': goal_flag,
-            'scene_graph_context': scene_graph_context  # 添加场景图上下文
+            'goal_flag': goal_flag
         })
         
-        # 更新距离
+        # Update agent position tracking
         agent_state = obs['agent_state']
         self.agent_distance_traveled += np.linalg.norm(agent_state.position - self.prev_agent_position)
         self.prev_agent_position = agent_state.position
         
-        # Pass planner output to agent's observation for stopping logic
-        obs['goal_flag_from_planner'] = goal_flag
-        obs['subtask_from_planner'] = subtask if isinstance(subtask, dict) else {}
+        # Enhanced logging for CoT analysis
+        logging.info(f"CoT Analysis - Goal: {self.current_episode['object']}, Direction: {goal_rotate * 30}°, Flag: {goal_flag}")
         
-        # Log the planner state being passed to agent
-        logging.info(f"Passing to agent: goal_flag={goal_flag}, subtask={subtask}")
-        
-        # 获取代理动作
+        # Get agent action with CoT context
         agent_action, metadata = self.agent.step(obs)
         step_metadata = metadata['step_metadata']
         
-        # 优化：结构化日志数据
+        # Enhanced logging data for CoT
+        cot_stats = {}
+        if hasattr(self.agent, 'get_optimization_stats'):
+            cot_stats = self.agent.get_optimization_stats()
+        
         log_responses = {
-            'EVALUATOR_RESPONSE': {
-                'goal_rotate': goal_rotate * 30,
+            'COT_EVALUATOR_RESPONSE': {
+                'goal_rotate_degrees': goal_rotate * 30,
                 'explorable_value': explorable_value,
                 'reason': reason,
-                'scene_graph_nodes': len(self.agent.scene_graph.nodes) if hasattr(self.agent, 'scene_graph') else 0
+                'cot_stats': cot_stats
             },
-            'PLANNING_RESPONSE': {
+            'COT_PLANNING_RESPONSE': {
                 'goal_flag': goal_flag,
                 'subtask': subtask,
-                'scene_graph_context_length': len(scene_graph_context) if scene_graph_context else 0
+                'goal_reason': goal_reason
             }
         }
         
         for key, value in log_responses.items():
             metadata['logging_data'][key] = str(value)
         
-        # 优化：高效图像处理
+        # Image processing and visualization
         images = metadata['images']
         
-        # 添加步数和目标信息到原始图像
-        if metadata['step'] is not None:
+        # Add step and goal information
+        if metadata.get('step') is not None:
             color_origin = self._add_text_to_image(color_origin, f"step {metadata['step']}", (10, 30))
         
-        if obs['goal'] is not None:
+        if obs.get('goal') is not None:
             color_origin = self._add_goal_text(color_origin, obs['goal'])
         
-        # 组合所有可视化图像
+        # Combine visualization images
         planner_images = {
             'panoramic': panoramic_image,
             'color_origin': color_origin,
             'nav_map': nav_map,
             'cvalue_map': cvalue_map,
-            'scene_graph': scene_graph_img if scene_graph_img is not None else None
         }
+        
+        # Add CoT-specific visualizations
+        if hasattr(self.agent, 'direction_analysis') and self.agent.direction_analysis:
+            planner_images['cot_analysis'] = f"CoT Analysis: {len(self.agent.direction_analysis)} directions analyzed"
         
         images.update(planner_images)
         
-        # 计算指标
+        # Calculate metrics
         metrics = self._calculate_metrics(agent_state, agent_action, 
                                          self.current_episode['shortest_path'], self.cfg['max_steps'])
         step_metadata.update(metrics)
         
-        # 记录结果
+        # Log results
         self._log(images, step_metadata, metadata['logging_data'])
         
+        # Check episode completion
         if metrics['done']:
             logging.info(f"Episode {self.curr_run_name} completed with status: {metrics['finish_status']}")
             if metrics['goal_reached']:
-                logging.info(f"Goal {obs['goal']} reached successfully!")
+                logging.info(f"🎉 CoT Goal {obs['goal']} reached successfully!")
             else:
-                logging.info(f"Goal {obs['goal']} not reached. Distance to goal: {metrics['distance_to_goal']:.2f}m")
-            agent_action = None  # Stop the agent if the episode is done
+                logging.info(f"❌ CoT Goal {obs['goal']} not reached. Distance: {metrics['distance_to_goal']:.2f}m")
+            agent_action = None
         
         return agent_action
     

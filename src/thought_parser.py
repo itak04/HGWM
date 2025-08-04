@@ -43,10 +43,8 @@ class ThoughtParser:
     
     def parse_thought(self, thought: str, direction_angle: float, step: int) -> Dict:
         """
-        Parse a structured thought from the VLM into scene graph components.
-        
         Args:
-            thought: The structured thought from VLM with <Observation>, <Spatial Reasoning>, etc.
+            thought: The thought text from VLM prediction
             direction_angle: The angle (in degrees) this observation was taken from
             step: Current step in the navigation process
             
@@ -60,19 +58,10 @@ class ThoughtParser:
             "step": step
         }
         
-        # Extract each section
-        observation = self._extract_section(thought, "Observation")
-        spatial_reasoning = self._extract_section(thought, "Spatial Reasoning")
-        task_planning = self._extract_section(thought, "Task Planning")
+        # For the current format, the entire text is used as observation
+        observation = thought
         
-        # If no formal "Observation" section, use the "Thought" content or entire text
-        if not observation:
-            observation = self._extract_section(thought, "Thought")
-            if not observation:
-                # Use the entire thought as observation
-                observation = thought
-        
-        # Extract objects from observation
+        # Extract objects from observation text
         objects = self._extract_objects(observation)
         for obj_name, confidence in objects.items():
             result["nodes"].append({
@@ -82,38 +71,63 @@ class ThoughtParser:
                 "step": step
             })
         
-        # Extract spatial relationships
-        if spatial_reasoning:
-            relationships = self._extract_relationships(spatial_reasoning, objects.keys())
+        # Extract room information directly from the observation
+        # This is important since the current format often mentions room types
+        rooms = self._extract_rooms(observation, list(objects.keys()))
+        for room_name, confidence in rooms.items():
+            result["nodes"].append({
+                "name": room_name,
+                "attributes": {"type": "room"},
+                "confidence": confidence,
+                "direction": direction_angle,
+                "step": step
+            })
+            
+            # Connect observed objects to their likely rooms
+            for obj_name in objects.keys():
+                # Check if object is likely in this room based on correlations
+                object_room_map = self._get_object_room_correlations()
+                is_likely_in_room = (room_name in object_room_map and 
+                                    obj_name in object_room_map[room_name])
+                
+                # Connect objects to room if they're mentioned together or if it's likely
+                if is_likely_in_room:
+                    result["edges"].append({
+                        "source": obj_name,
+                        "target": room_name,
+                        "relation_type": "in",
+                        "confidence": min(objects[obj_name], confidence) * 0.8
+                    })
+        
+        # Extract simple spatial relationships between objects
+        if len(objects) >= 2:
+            relationships = self._extract_relationships(observation, objects.keys())
             for rel in relationships:
                 result["edges"].append(rel)
                 
-            # Extract room information with enhanced object-based confidence
-            rooms = self._extract_rooms(spatial_reasoning, list(objects.keys()))
-            for room_name, confidence in rooms.items():
-                result["nodes"].append({
-                    "name": room_name,
-                    "attributes": {"type": "room"},
-                    "confidence": confidence,
-                    "direction": direction_angle,
-                    "step": step
-                })
-                
-                # Connect observed objects to the room
-                for obj_name in objects.keys():
-                    # Check if the object is likely in this room based on correlations
-                    object_room_map = self._get_object_room_correlations()
-                    is_likely_in_room = (room_name in object_room_map and 
-                                        obj_name in object_room_map[room_name])
-                    
-                    if obj_name in spatial_reasoning.lower() or is_likely_in_room:
-                        result["edges"].append({
-                            "source": obj_name,
-                            "target": room_name,
-                            "relation_type": "in",
-                            "confidence": min(objects[obj_name], confidence) * 0.8
-                        })
+        # Add negative context detection for more accurate object extraction
+        # For example, avoid adding "bed" when text says "no sign of a bed"
+        negative_patterns = [
+            "no sign of", "not visible", "no visible", 
+            "no strong indication", "cannot see", "not found"
+        ]
         
+        nodes_to_remove = []
+        for node in result["nodes"]:
+            obj_name = node["name"]
+            for pattern in negative_patterns:
+                # If negative pattern appears near object name, mark for removal
+                if pattern in observation.lower() and obj_name in observation.lower():
+                    pattern_pos = observation.lower().find(pattern)
+                    obj_pos = observation.lower().find(obj_name)
+                    if abs(pattern_pos - obj_pos) < 50:  # Within ~50 chars
+                        nodes_to_remove.append(node)
+                        break
+        
+        # Remove nodes with negative context
+        for node in nodes_to_remove:
+            result["nodes"].remove(node)
+            
         return result
     
     def update_scene_graph(self, scene_graph: SceneGraph, parsed_data: Dict, 
@@ -132,6 +146,22 @@ class ThoughtParser:
         # Track added nodes to apply confidence accumulation
         added_nodes = set()
         
+        # First, decay confidence of unobserved nodes
+        current_observation_objects = {node["name"] for node in parsed_data["nodes"]}
+        for node_name, node in scene_graph.nodes.items():
+            # Skip path nodes and room type nodes
+            if node_name.startswith("path_point_") or node_name in scene_graph.room_nodes:
+                continue
+                
+            # If object wasn't observed in this step, decay its confidence slightly
+            if node_name not in current_observation_objects:
+                # More aggressive decay for goal objects that weren't seen
+                is_goal = node_name == self.current_goal if hasattr(self, 'current_goal') else False
+                decay_factor = 0.15 if is_goal else 0.05
+                
+                # Apply decay
+                node.confidence = max(0.1, node.confidence * (1.0 - decay_factor))
+            
         # Add or update nodes
         for node_data in parsed_data["nodes"]:
             node_name = node_data["name"]
@@ -198,36 +228,87 @@ class ThoughtParser:
             return match.group(1).strip()
         return ""
     
+    def _is_in_negative_context(self, text: str, object_name: str) -> bool:
+        """
+        Improved negative context detection that handles full sentence context.
+        
+        Args:
+            text: The full text to analyze
+            object_name: The object name to check for negative context
+            
+        Returns:
+            True if the object appears in a negative context, False otherwise
+        """
+        negative_patterns = [
+            "no sign of", "not visible", "no visible", 
+            "no strong indication", "cannot see", "not found",
+            "not in sight", "no clear", "unlikely to find",
+            "doesn't have", "does not have", "is not", "are not",
+            "but no", "unlikely", "less likely"
+        ]
+        
+        text_lower = text.lower()
+        obj_lower = object_name.lower()
+        
+        # Check if object is mentioned
+        if obj_lower not in text_lower:
+            return False
+        
+        # Split into sentences for more accurate context analysis
+        sentences = text_lower.split('.')
+        
+        for sentence in sentences:
+            # Only check sentences containing our object
+            if obj_lower in sentence:
+                # Check if any negative pattern appears in the same sentence
+                if any(pattern in sentence for pattern in negative_patterns):
+                    return True
+        
+        return False
+    
     def _extract_objects(self, text: str) -> Dict[str, float]:
-        """Extract object names and confidence levels from text."""
+        """Extract object names with improved negative context handling."""
         objects = {}
         
-        # First pass: extract objects using patterns
-        for pattern in self.object_patterns:
-            matches = re.finditer(pattern, text.lower())
-            for match in matches:
-                obj = match.group(1).strip()
-                # Filter out very short objects and stopwords
-                if len(obj) > 2 and obj not in ["the", "and", "that", "this", "it", "room"]:
-                    # Check for confidence markers
-                    confidence = 0.6  # Default confidence
-                    for marker, value in self.confidence_markers.items():
-                        if marker in text.lower():
-                            confidence = value
-                            break
-                    
-                    # Clean up the object name
-                    obj = self._clean_object_name(obj)
-                    if obj and len(obj) > 1:
-                        objects[obj] = confidence
+        # Common objects we're interested in
+        common_objects = [
+            "bed", "sofa", "chair", "table", "desk", "tv", "refrigerator",
+            "stove", "sink", "toilet", "bathtub", "shower", "nightstand",
+            "dresser", "couch", "bookshelf", "cabinet", "wardrobe"
+        ]
         
-        # Second pass: direct noun phrase extraction (simulated here)
-        # In a real implementation, this could use spaCy or another NLP library
-        noun_phrases = self._extract_noun_phrases(text)
-        for phrase in noun_phrases:
-            cleaned = self._clean_object_name(phrase)
-            if cleaned and len(cleaned) > 1:
-                objects[cleaned] = objects.get(cleaned, 0.6)
+        # Common room types
+        room_types = [
+            "bedroom", "bathroom", "kitchen", "living room", "dining room",
+            "hallway", "office", "closet"
+        ]
+        
+        # Stop words that should never be extracted as objects
+        stop_words = [
+            "the", "a", "an", "and", "or", "but", "if", "then", "there",
+            "here", "where", "when", "who", "what", "how", "is", "are",
+            "was", "were", "be", "been", "being", "have", "has", "had",
+            "do", "does", "did", "will", "would", "shall", "should", 
+            "may", "might", "must", "can", "could", "to", "in", "on", 
+            "with", "no", "not", "other", "another", "possibility", "indication"
+        ]
+        
+        # First pass: direct object matching with negative context check
+        text_lower = text.lower()
+        
+        # Check for common objects
+        for obj in common_objects:
+            if obj in text_lower and obj not in stop_words:
+                # Skip if in negative context
+                if not self._is_in_negative_context(text_lower, obj):
+                    objects[obj] = 0.6  # Default confidence
+        
+        # Check for room types with special handling
+        for room in room_types:
+            if room in text_lower:
+                # Rooms need stricter negative context checking
+                if not self._is_in_negative_context(text_lower, room):
+                    objects[room] = 0.7  # Default confidence for rooms
         
         return objects
     
@@ -412,32 +493,32 @@ class ThoughtParser:
         }
     
 
-def parse_vlm_direction_thoughts(thoughts_dict: Dict[str, str], scene_graph: SceneGraph, 
-                                agent_position: np.ndarray, step: int):
-    """
-    Process all direction thoughts from the PredictVLM and update the scene graph.
-    
-    Args:
-        thoughts_dict: Dictionary mapping direction angles to thought strings
-        scene_graph: SceneGraph object to update
-        agent_position: Current agent position
-        step: Current step number
-    
-    Returns:
-        Updated scene graph
-    """
-    parser = ThoughtParser()
-    
-    for direction, thought in thoughts_dict.items():
-        try:
-            # Convert direction to numeric angle
-            angle = int(direction)
-            
-            # Parse thought and update scene graph
-            parsed_data = parser.parse_thought(thought, angle, step)
-            parser.update_scene_graph(scene_graph, parsed_data, agent_position, step)
-            
-        except Exception as e:
-            logging.error(f"Error parsing thought for direction {direction}: {e}")
-    
-    return scene_graph
+    def parse_vlm_direction_thoughts(thoughts_dict: Dict[str, str], scene_graph: SceneGraph, 
+                                    agent_position: np.ndarray, step: int):
+        """
+        Process all direction thoughts from the PredictVLM and update the scene graph.
+        
+        Args:
+            thoughts_dict: Dictionary mapping direction angles to thought strings
+            scene_graph: SceneGraph object to update
+            agent_position: Current agent position
+            step: Current step number
+        
+        Returns:
+            Updated scene graph
+        """
+        parser = ThoughtParser()
+        
+        for direction, thought in thoughts_dict.items():
+            try:
+                # Convert direction to numeric angle
+                angle = int(direction)
+                
+                # Parse thought and update scene graph
+                parsed_data = parser.parse_thought(thought, angle, step)
+                parser.update_scene_graph(scene_graph, parsed_data, agent_position, step)
+                
+            except Exception as e:
+                logging.error(f"Error parsing thought for direction {direction}: {e}")
+        
+        return scene_graph

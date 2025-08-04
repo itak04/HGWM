@@ -218,28 +218,39 @@ class SceneGraph:
             self._extract_subgraph(next_node, nodes_dict, edges_list, visited, max_distance, current_distance + 1)
     
     def _find_likely_rooms_for_object(self, object_name: str) -> List[str]:
-        """Find rooms that are likely to contain the given object."""
-        # Common object-room associations
+        """
+        Find rooms that are likely to contain the given object using enhanced probabilities.
+        """
+        # Common object-room associations with probabilities
         object_room_map = {
-            "bed": ["bedroom"],
-            "toilet": ["bathroom"],
-            "sink": ["bathroom", "kitchen"],
-            "shower": ["bathroom"],
-            "sofa": ["living room"],
-            "tv": ["living room"],
-            "table": ["dining room", "living room", "kitchen"],
-            "stove": ["kitchen"],
-            "refrigerator": ["kitchen"],
-            "desk": ["bedroom", "office"]
+            "bed": {"bedroom": 0.95, "living_room": 0.05},
+            "toilet": {"bathroom": 0.98},
+            "sink": {"bathroom": 0.8, "kitchen": 0.8},
+            "shower": {"bathroom": 0.98},
+            "sofa": {"living_room": 0.95, "bedroom": 0.05},
+            "tv": {"living_room": 0.85, "bedroom": 0.4},
+            "table": {"dining_room": 0.9, "living_room": 0.5, "kitchen": 0.7},
+            "stove": {"kitchen": 0.98},
+            "refrigerator": {"kitchen": 0.98},
+            "desk": {"bedroom": 0.7, "office": 0.9}
         }
         
+        results = []
+        
         # Check if we have a direct mapping
-        for obj_pattern, rooms in object_room_map.items():
-            if obj_pattern in object_name:
-                return [room for room in rooms if room in self.room_nodes]
+        for obj_pattern, room_probs in object_room_map.items():
+            if obj_pattern in object_name.lower():
+                # Sort rooms by probability
+                sorted_rooms = sorted(room_probs.items(), key=lambda x: x[1], reverse=True)
+                for room, prob in sorted_rooms:
+                    if room in self.room_nodes and prob > 0.3:
+                        results.append(room)
         
         # Return all rooms if no specific mapping found
-        return list(self.room_nodes)
+        if not results:
+            return list(self.room_nodes)
+        
+        return results
     
     def to_networkx(self) -> nx.DiGraph:
         """Convert to a NetworkX graph for visualization and analysis."""
@@ -263,37 +274,65 @@ class SceneGraph:
         
         return G
     
-    def visualize(self, save_path=None):
-        """Visualize the graph."""
+    def visualize(self, save_path=None, highlight_goal=None):
+        """Enhanced visualization with goal highlighting and confidence information"""
         G = self.to_networkx()
         
-        # Set node colors based on type
+        # Set node colors and sizes based on type and confidence
         colors = []
+        sizes = []
+        edge_weights = []
+        
+        plt.figure(figsize=(12, 8))
+        pos = nx.spring_layout(G, seed=42)  # Fixed seed for consistent layout
+        
+        # Prepare node styling
         for node in G.nodes():
             if node in self.room_nodes:
                 colors.append('lightblue')
+                sizes.append(700)  # Larger for rooms
+            elif highlight_goal and node == highlight_goal.lower():
+                colors.append('red')  # Highlight goal in red
+                sizes.append(800)  # Make goal larger
             else:
                 colors.append('lightgreen')
+                sizes.append(500)
+                
+            # Add confidence to node labels if available
+            if node in self.nodes and self.nodes[node].confidence > 0:
+                node_label = f"{node}\n{self.nodes[node].confidence:.2f}"
+                G.nodes[node]["label"] = node_label
         
-        plt.figure(figsize=(12, 8))
-        pos = nx.spring_layout(G)
-        nx.draw_networkx_nodes(G, pos, node_color=colors, node_size=500, alpha=0.8)
-        nx.draw_networkx_labels(G, pos, font_size=12)
-        nx.draw_networkx_edges(G, pos, width=1.0, alpha=0.5)
+        # Draw nodes with enhanced styling
+        nx.draw_networkx_nodes(G, pos, node_color=colors, node_size=sizes, alpha=0.8)
+        
+        # Draw custom node labels with confidence
+        labels = {n: G.nodes[n].get("label", n) for n in G.nodes()}
+        nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, font_weight="bold")
+        
+        # Draw edges with confidence-based styling
+        for edge in self.edges:
+            width = 1.0 + edge.confidence * 2  # Thicker edges for higher confidence
+            nx.draw_networkx_edges(G, pos, edgelist=[(edge.source, edge.target)], 
+                                  width=width, alpha=0.6, 
+                                  edge_color='gray' if edge.confidence < 0.7 else 'blue')
         
         # Add edge labels
-        edge_labels = {(e.source, e.target): e.relation_type for e in self.edges}
-        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=10)
+        edge_labels = {(e.source, e.target): f"{e.relation_type}\n{e.confidence:.2f}" 
+                      for e in self.edges}
+        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
         
-        plt.title("Scene Graph")
+        # Add title with stats
+        plt.title(f"Scene Graph - {len(self.nodes)} objects, {len(self.edges)} relationships")
         plt.axis('off')
         
         if save_path:
             plt.savefig(save_path)
             plt.close()
+            return save_path
         else:
             plt.show()
-    
+            return None
     def to_dict(self):
         """Convert to dictionary for serialization."""
         return {

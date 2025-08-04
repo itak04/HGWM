@@ -13,24 +13,43 @@ logging.getLogger("httpx").setLevel(logging.ERROR)
 
 def encode_image(image):
     try:
-        # 将numpy数组转换回PIL图像
-        image = Image.fromarray(image[:, :, :3], mode='RGB')
-
-        # 将图像保存到字节流中
+        # Handle different input types
+        if isinstance(image, (list, tuple)):
+            if len(image) > 0:
+                image = image[0]  # Take first image if it's a list
+            else:
+                raise ValueError("Empty image list provided")
+                
+        # Convert numpy array if needed
+        if not isinstance(image, np.ndarray):
+            image = np.array(image)
+            
+        # Ensure we have a proper RGB image
+        if len(image.shape) == 3 and image.shape[2] >= 3:
+            image = image[:, :, :3]  # Take only RGB channels
+        
+        # Convert to PIL Image
+        image = Image.fromarray(image.astype(np.uint8))
+        
+        # Save to bytes buffer
         buffered = io.BytesIO()
         image.save(buffered, format="PNG")
-
-        # 将字节流编码为Base64
+        
+        # Return base64 encoded string
         return base64.b64encode(buffered.getvalue()).decode('utf-8')
     except Exception as e:
-        raise RuntimeError(f"Failed to convert image to base64: {e}")
+        error_msg = f"Failed to convert image to base64: {str(e)}"
+        print(f"❌ {error_msg}")
+        logging.error(error_msg)
+        # Return a placeholder image to avoid breaking the flow
+        return None
 
 class SiliconFlowVLM:
     """
     SiliconFlow API implementation for VLM using free models
     """
 
-    def __init__(self, model="Qwen/Qwen2.5-VL-7B-Instruct", system_instruction=None):
+    def __init__(self, model="Pro/Qwen/Qwen2.5-VL-7B-Instruct", system_instruction=None):
         """
         Initialize the SiliconFlow model with specified configuration.
 
@@ -204,6 +223,109 @@ class SiliconFlowVLM:
 
     def reset(self):
         """Reset the context state of the VLM agent."""
+        pass
+
+    def get_spend(self):
+        """Retrieve the total token usage."""
+        return self.spend
+
+class SiliconFlowLLM:
+    """
+    SiliconFlow API implementation for pure LLM text generation
+    Used for goal subgraph construction and semantic reasoning
+    """
+
+    def __init__(self, model="Pro/Qwen/Qwen2.5-7B-Instruct", system_instruction=None):
+        """
+        Initialize the SiliconFlow LLM with specified configuration.
+
+        Parameters
+        ----------
+        model : str
+            The LLM model version to be used. Default: "Pro/Qwen/Qwen2.5-7B-Instruct" (free)
+        system_instruction : str, optional
+            System instructions for model behavior.
+        """
+        self.name = model
+        
+        # Store original proxy environment variables
+        original_proxies = {}
+        proxy_vars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY']
+        
+        # Save and clear proxy environment variables for API calls
+        for var in proxy_vars:
+            if var in os.environ:
+                original_proxies[var] = os.environ[var]
+                del os.environ[var]
+        
+        try:
+            # Initialize OpenAI client with SiliconFlow endpoint
+            self.client = OpenAI(
+                api_key=os.getenv("SILICONFLOW_API_KEY", "sk-placeholder"), 
+                base_url="https://api.siliconflow.cn/v1"
+            )
+        finally:
+            # Restore proxy environment variables
+            for var, value in original_proxies.items():
+                os.environ[var] = value
+
+        self.system_instruction = system_instruction
+        self.spend = 0  # SiliconFlow免费模型暂时不计费
+
+    def _create_messages(self, text_prompt: str):
+        """Create messages array for LLM API call"""
+        messages = []
+        
+        if self.system_instruction:
+            messages.append({
+                "role": "system",
+                "content": self.system_instruction
+            })
+        
+        messages.append({
+            "role": "user", 
+            "content": text_prompt
+        })
+        
+        return messages
+
+    def call_chat(self, text_prompt: str):
+        """Chat completion with system instruction"""
+        messages = self._create_messages(text_prompt)
+        
+        # 临时清除代理设置
+        original_proxies = {}
+        proxy_vars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY']
+        
+        for var in proxy_vars:
+            if var in os.environ:
+                original_proxies[var] = os.environ[var]
+                del os.environ[var]
+        
+        try:
+            response = self.client.chat.completions.create(
+                model=self.name,
+                messages=messages,
+                temperature=0.7,
+                max_tokens=2048
+            )
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            print(f"❌ SiliconFlow LLM API error: {e}")
+            logging.error(f"SiliconFlow LLM API error: {e}")
+            return f"API调用失败: {str(e)}"
+        finally:
+            # 恢复代理设置
+            for var, value in original_proxies.items():
+                os.environ[var] = value
+
+    def call(self, text_prompt: str):
+        """Basic completion without system instruction"""
+        return self.call_chat(text_prompt)
+
+    def reset(self):
+        """Reset the context state of the LLM agent."""
         pass
 
     def get_spend(self):
