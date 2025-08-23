@@ -463,7 +463,7 @@ class CoTGraphAgent(WMNavAgent):
     
     def _construct_goal_subgraph_via_llm(self, goal: str) -> Dict:
         """
-        Enhanced goal subgraph construction with object relationship attributes from UniGoal
+        goal subgraph construction with object relationship attributes from UniGoal
         Optimized with caching to avoid redundant LLM calls
         """
         try:
