@@ -540,11 +540,6 @@ class CoTGraphAgent(WMNavAgent):
                 'vlm_semantic_hints': {{
                     'primary_focus': 'THE most important room type and layout pattern',
                     'anchor_detection_priority': ['object1', 'object2', 'object3'],
-                    'spatial_scoring_rules': [
-                        'High score (8-10): {goal} visible OR all 3 anchors detected',
-                        'Medium score (5-7): 2+ anchors detected in correct spatial arrangement', 
-                        'Low score (1-4): wrong room type OR no anchor objects detected'
-                    ],
                     'definitive_guidance': 'Focus on THE primary target room type with THE expected anchor object arrangement'
                 }},
                 'overlap_calculation_weights': {{
@@ -672,9 +667,7 @@ class CoTGraphAgent(WMNavAgent):
             print(f"⚠️ Backward compatibility mapping failed: {e}")
     
     def _get_cached_semantic_hints(self, goal: str, goal_subgraph: Dict) -> str:
-        """
-        获取缓存的语义提示，避免重复生成，降低算法复杂度
-        """
+        """获取缓存的语义提示，避免重复生成，降低算法复杂度"""
         try:
             # 首先检查子图中是否已包含预生成的语义提示
             if isinstance(goal_subgraph, dict) and 'vlm_semantic_hints' in goal_subgraph:
@@ -682,21 +675,27 @@ class CoTGraphAgent(WMNavAgent):
                 
                 # 如果语义提示是结构化的，将其格式化为字符串
                 if isinstance(hints_data, dict):
-                    focus_areas = hints_data.get('focus_areas', [])
-                    visual_priorities = hints_data.get('visual_priorities', [])
-                    scoring_guidance = hints_data.get('scoring_guidance', '')
+                    # 支持两种结构 - 新结构(LLM生成)和旧结构(历史代码期望的)
+                    # 映射字段，优先使用新字段，回退到旧字段
+                    focus_areas = hints_data.get('primary_focus', hints_data.get('focus_areas', []))
+                    if isinstance(focus_areas, str):  # 如果是单个字符串，转为列表
+                        focus_areas = [focus_areas]
+                    
+                    visual_priorities = hints_data.get('anchor_detection_priority', [])
                     
                     hints_prompt = f"""
-        **Navigation Context for {goal}**:
-
-        **Focus Areas**:
-        {chr(10).join(f"- {area}" for area in focus_areas)}
-
-        **Visual Assessment Priorities**:
-        {chr(10).join(f"{i+1}. {priority}" for i, priority in enumerate(visual_priorities))}
-
-        **Scoring Guidance**: {scoring_guidance}
-                            """
+                    CRITICAL NAVIGATION CONTEXT FOR {goal.upper()}:
+                    
+                    PRIMARY TARGET IDENTIFICATION:
+                    {focus_areas[0] if isinstance(focus_areas, list) and focus_areas else "Look for the target object or rooms where it's typically found"}
+                    
+                    PRIORITY ANCHOR OBJECTS (Look for these specific objects):
+                    {chr(10).join(f"- {priority} - HIGH RELEVANCE INDICATOR" for i, priority in enumerate(visual_priorities[:3]))}
+                    
+                    VISUAL ASSESSMENT STRATEGY:
+                    - Prioritize directions showing: {', '.join(visual_priorities[:2]) if isinstance(visual_priorities, list) and visual_priorities else "relevant objects and pathways"}
+                    - Consider both DIRECT visibility of {goal} AND presence of anchor objects
+                    """
                     
                     print(f"💡 Using cached semantic hints from subgraph: {len(hints_prompt)} characters")
                     return hints_prompt.strip()
@@ -733,19 +732,19 @@ class CoTGraphAgent(WMNavAgent):
             
             # 快速构建语义提示
             hints_prompt = f"""
-**Navigation Context for {goal}**:
+            **Navigation Context for {goal}**:
 
-**Target Locations**: {', '.join(target_rooms)}
-**Expected Objects**: {', '.join(object_names[:4]) if object_names else 'Related furniture'}
-**Spatial Layout**: {', '.join(spatial_relations[:3])}
+            **Target Locations**: {', '.join(target_rooms)}
+            **Expected Objects**: {', '.join(object_names[:4]) if object_names else 'Related furniture'}
+            **Spatial Layout**: {', '.join(spatial_relations[:3])}
 
-**Visual Priorities**:
-1. Room Type Recognition: Look for {', '.join(target_rooms)}
-2. Object Relationships: Find {', '.join(object_names[:3])} arrangements
-3. Accessibility Paths: Prioritize clear passages to unexplored areas
-4. Target Indicators: Objects commonly found with {goal}
+            **Visual Priorities**:
+            1. Room Type Recognition: Look for {', '.join(target_rooms)}
+            2. Object Relationships: Find {', '.join(object_names[:3])} arrangements
+            3. Accessibility Paths: Prioritize clear passages to unexplored areas
+            4. Target Indicators: Objects commonly found with {goal}
 
-**Scoring Focus**: Emphasize directions leading to target areas with expected layouts.
+            **Scoring Focus**: Emphasize directions leading to target areas with expected layouts.
             """
             
             print(f"⚡ Fast semantic hints generated: {len(hints_prompt)} characters")
@@ -1347,7 +1346,7 @@ class CoTGraphAgent(WMNavAgent):
         if not scene_objects:
             return {'overlap_score': 0.0, 'matched_pairs': [], 'exploration_strategy': 'frontier_exploration', 'num_matches': 0}
         
-        # 获取SOTA权重配置
+        # 获取权重配置
         weights = goal_subgraph.get('overlap_calculation_weights', {
             'room_type_match': 0.4,
             'anchor_objects_detected': 0.35, 
