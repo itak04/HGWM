@@ -143,11 +143,8 @@ class SiliconFlowVLM:
             response = self.client.chat.completions.create(
                 model=self.name,
                 messages=messages,
-                max_tokens=500,
-                temperature=0.1,  # 降低随机性以获得更稳定的结果
-                top_p=0.9,
-                stream=False,
-                timeout=30  # 添加超时设置
+                temperature=0.7,
+                max_tokens=3000  # 增加LLM的token限制以支持复杂的目标子图构建
             )
             
             # 对于免费模型，我们简单计算token数量
@@ -194,7 +191,7 @@ class SiliconFlowVLM:
                     response = self.client.chat.completions.create(
                         model=self.name,
                         messages=messages,
-                        max_tokens=500,
+                        max_tokens=1500,  # 增加token限制
                         temperature=0.1,
                         top_p=0.9,
                         stream=False,
@@ -310,7 +307,7 @@ class SiliconFlowLLM:
                 model=self.name,
                 messages=messages,
                 temperature=0.7,
-                max_tokens=2048
+                max_tokens=3000  # 增加LLM token限制
             )
             print(f"✅ SiliconFlow LLM API call successful")
             return response.choices[0].message.content
@@ -400,7 +397,7 @@ class QwenVLM:
                         ],
                     }
                 ],
-                max_tokens=500,
+                max_tokens=3000,  # 大幅增加Gemini VLM token限制以确保完整6方向分析
                 temperature=0,
                 top_p=1,
                 stream=False  # 是否开启流式输出
@@ -430,7 +427,7 @@ class QwenVLM:
                         ],
                     }
                 ],
-                max_tokens=500,
+                max_tokens=3000,  # 大幅增加Gemini VLM token限制以确保完整6方向分析
                 temperature=0,
                 top_p=1,
                 stream=False  # 是否开启流式输出
@@ -519,7 +516,7 @@ class GeminiVLM:
         return {
             "contents": [{"parts": parts}],
             "generationConfig": {
-                "maxOutputTokens": 500,
+                "maxOutputTokens": 2000,  # 增加Gemini API maxOutputTokens以支持完整6方向分析
                 "temperature": 0.1,
                 "topP": 0.9
             }

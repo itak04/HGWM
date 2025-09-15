@@ -23,6 +23,7 @@ def main():
     parser.add_argument('-lf', '--log_freq', type=int, help='Logging frequency (optional)')
     parser.add_argument('-ms', '--max_steps', type=int, help='Max steps per episode (optional)')
     parser.add_argument('-ne', '--num_episodes', type=int, help='Number of episodes to run (optional)')
+    parser.add_argument('--episodes', type=str, help='Comma-separated list of specific episode indices to test (e.g., "994,964")')
     parser.add_argument('-pa', '--parallel', action='store_true', help='Enable parallel execution')
     parser.add_argument('--instances', type=int, help='Number of instances for parallel execution (optional)')
     parser.add_argument('--instance', type=int, help='Instance number for parallel execution (optional)')
@@ -43,6 +44,11 @@ def main():
         config['env_cfg']['max_steps'] = args.max_steps
     if args.num_episodes is not None:
         config['env_cfg']['num_episodes'] = args.num_episodes
+    if args.episodes is not None:
+        # Parse specific episodes list
+        episodes_list = [int(x.strip()) for x in args.episodes.split(',')]
+        config['env_cfg']['specific_episodes'] = episodes_list
+        config['env_cfg']['num_episodes'] = len(episodes_list)  # Override number of episodes
     if args.instances is not None:
         config['env_cfg']['instances'] = args.instances
     if args.instance is not None:

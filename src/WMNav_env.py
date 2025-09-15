@@ -114,11 +114,18 @@ class Env:
         """
         Runs the experiment by iterating over episodes.
         """
-        instance_size = math.ceil(self.num_episodes / self.cfg['instances'])
-        start_ndx = self.cfg['instance'] * instance_size
-        end_ndx = self.num_episodes
+        # Check if specific episodes are specified
+        if 'specific_episodes' in self.cfg and self.cfg['specific_episodes']:
+            episode_indices = self.cfg['specific_episodes']
+            print(f"🎯 Running specific episodes: {episode_indices}")
+        else:
+            # Original logic for sequential episodes
+            instance_size = math.ceil(self.num_episodes / self.cfg['instances'])
+            start_ndx = self.cfg['instance'] * instance_size
+            end_ndx = self.num_episodes
+            episode_indices = range(start_ndx, min(start_ndx + self.cfg['num_episodes'], end_ndx))
 
-        for episode_ndx in range(start_ndx, min(start_ndx + self.cfg['num_episodes'], end_ndx)):
+        for episode_ndx in episode_indices:
             self.wandb_log_data = {
                 'episode_ndx': episode_ndx,
                 'instance': self.cfg['instance'],
@@ -370,6 +377,7 @@ class WMNavEnv(Env):
             episode_ndx (int): The index of the episode to initialize.
         """
         super()._initialize_episode(episode_ndx)
+        self.episode_ndx = episode_ndx  # 添加：保存episode_ndx为实例属性
         episode = self.all_episodes[episode_ndx]
         if 'hm3d' in self.cfg['dataset']:
             f = episode['scene_id'].split('/')[1:]
@@ -431,7 +439,6 @@ class WMNavEnv(Env):
             'counterclock': PolarAction(0, 0.167 * np.pi)
         }
         
-        # Collect panoramic images (12 views: 0°, 30°, 60°, ..., 330°)
         for i in range(11):
             obs = self.simWrapper.step(loop_actions['clockwise'])
             # For CoTGraphAgent, only update navigability for key directions
@@ -512,6 +519,28 @@ class WMNavEnv(Env):
         if hasattr(self.agent, 'get_optimization_stats'):
             cot_stats = self.agent.get_optimization_stats()
         
+        # Extract goal subgraph information for logging
+        goal_subgraph_info = {}
+        if hasattr(self.agent, 'goal_subgraph') and self.agent.goal_subgraph:
+            goal_subgraph = self.agent.goal_subgraph
+            goal_subgraph_info = {
+                'target_rooms': goal_subgraph.get('target_rooms', []),
+                'nodes_count': len(goal_subgraph.get('nodes', [])),
+                'edges_count': len(goal_subgraph.get('edges', [])),
+                'vlm_semantic_hints': goal_subgraph.get('vlm_semantic_hints', {}),
+                'subgraph_cached': hasattr(self.agent, 'goal_subgraph_cache') and 
+                                 self.current_episode['object'] in getattr(self.agent, 'goal_subgraph_cache', {}),
+                'construction_method': goal_subgraph.get('construction_method', 'llm_generated')
+            }
+            
+            # Add overlap calculation details if available
+            if hasattr(self.agent, 'scene_memory') and self.agent.scene_memory:
+                last_overlap = self.agent.scene_memory.get('last_overlap_analysis', {})
+                if last_overlap:
+                    goal_subgraph_info['last_overlap_score'] = last_overlap.get('overlap_score', 0)
+                    goal_subgraph_info['exploration_strategy'] = last_overlap.get('exploration_strategy', 'unknown')
+                    goal_subgraph_info['matched_objects'] = len(last_overlap.get('matched_pairs', []))
+        
         log_responses = {
             'COT_EVALUATOR_RESPONSE': {
                 'goal_rotate_degrees': goal_rotate * 30,
@@ -523,6 +552,12 @@ class WMNavEnv(Env):
                 'goal_flag': goal_flag,
                 'subtask': subtask,
                 'goal_reason': goal_reason
+            },
+            'GOAL_SUBGRAPH_RESPONSE': {
+                'target_object': self.current_episode['object'],
+                'subgraph_info': goal_subgraph_info,
+                'step_number': self.step,
+                'episode_id': self.episode_ndx
             }
         }
         
