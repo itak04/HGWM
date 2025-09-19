@@ -170,6 +170,42 @@ class CoTGraphAgent(WMNavAgent):
                 return 0
         return FallbackLLM()
     
+    def _get_fallback_predictions(self):
+        """获取默认的VLM预测结果"""
+        fallback_predictions = {}
+        directions = [30, 90, 150, 210, 270, 330]
+        
+        for direction in directions:
+            fallback_predictions[str(direction)] = {
+                'Score': 1,  # 低分但不是0，保持探索能力
+                'Room': 'unknown',
+                'Objects': {},
+                'Explanation': f'Fallback prediction for direction {direction}°'
+            }
+        
+        fallback_predictions['confidence'] = 0.3
+        fallback_predictions['overall_confidence'] = 0.3
+        
+        return fallback_predictions
+    
+    def _get_fallback_goal_subgraph(self, goal):
+        """获取默认的目标子图"""
+        return {
+            'target_room_hierarchy': {
+                'primary_room': 'unknown',
+                'secondary_rooms': [],
+                'adjacent_zones': []
+            },
+            'spatial_anchor_objects': [goal],
+            'exploration_strategy': {
+                'frontier_priorities': ['forward', 'left', 'right']
+            },
+            'hallway_navigation': {
+                'room_connections': {},
+                'wayfinding_objects': []
+            }
+        }
+    
     def reset(self):
         """Reset agent state for new episode"""
         super().reset()
@@ -230,7 +266,8 @@ class CoTGraphAgent(WMNavAgent):
             error_msg = f"VLM-LLM协作预测失败: {str(e)}"
             print(f"❌ {error_msg}")
             logging.error(error_msg)
-            return None
+            # 返回默认的回退预测结果
+            return self._get_fallback_predictions(), self._get_fallback_goal_subgraph(goal)
     
     def make_curiosity_value(self, pano_images, goal):
         """
@@ -239,18 +276,22 @@ class CoTGraphAgent(WMNavAgent):
         """
         print(f"\n🎯 CoT Curiosity Value Generation - Goal: {goal}")
         
-        # Initialize inference_image outside try block to avoid UnboundLocalError
+        # 存储当前目标供后续使用
+        self._current_goal = goal
+        
+        # Initialize variables to prevent UnboundLocalError
         angles = (np.arange(len(pano_images))) * 30
         inference_image = self._concat_panoramic(pano_images, angles)  # Use instance method
+        explorable_value = {}
+        reason = {}
+        vlm_predictions = None
+        goal_subgraph = None
         
         try:
             # Get panoramic analysis using CoT methodology with both VLM predictions and goal subgraph
             vlm_predictions, goal_subgraph = self._predicting_module(inference_image, goal)
             
             # Extract values in the expected format
-            explorable_value = {}
-            reason = {}
-            
             # Define expected direction keys to filter out metadata fields
             expected_directions = ['30', '90', '150', '210', '270', '330']
             metadata_fields = ['spatial_analysis', 'recommended_directions', 'overall_confidence', 
@@ -273,48 +314,78 @@ class CoTGraphAgent(WMNavAgent):
                             print(f"⚠️ Non-dict values for {angle_str}: {values}")
                     # Silently skip non-direction keys that are not in metadata_fields (for future extensibility)
             
-            # Fallback if extraction failed
-            if not explorable_value:
-                print("⚠️ Using fallback curiosity values")
-                vlm_predictions, goal_subgraph = None, None  # 重置为None以便fallback处理
-                for i in range(1, 12, 2):  # 30, 90, 150, 210, 270, 330
-                    angle_str = str(i * 30)
-                    explorable_value[angle_str] = 5
-                    reason[angle_str] = f'Fallback analysis for direction {angle_str}°'
-            
-            print(f"📊 Curiosity Values Generated:")
-            for angle, score in explorable_value.items():
-                print(f"  🧭 {angle}°: {score}/10")
-            
-            # 存储VLM预测和目标子图供update_curiosity_value使用
-            self._current_vlm_predictions = vlm_predictions
-            self._current_goal_subgraph = goal_subgraph
-            
         except Exception as e:
             print(f"❌ Error in CoT curiosity generation: {e}")
-            explorable_value = None
-            reason = None
-            self._current_vlm_predictions = None
-            self._current_goal_subgraph = None
+            logging.error(f"make_curiosity_value error: {str(e)}")
+            # Reset variables for fallback processing
+            vlm_predictions = None
+            goal_subgraph = None
             
+        # Fallback if extraction failed or error occurred
+        if not explorable_value:
+            print("⚠️ Using fallback curiosity values")
+            for i in range(1, 12, 2):  # 30, 90, 150, 210, 270, 330
+                angle_str = str(i * 30)
+                explorable_value[angle_str] = 5
+                reason[angle_str] = f'Fallback analysis for direction {angle_str}°'
+        
+        print(f"📊 Curiosity Values Generated:")
+        for angle, score in explorable_value.items():
+            print(f"  🧭 {angle}°: {score}/10")
+        
+        # 存储VLM预测和目标子图供update_curiosity_value使用
+        self._current_vlm_predictions = vlm_predictions
+        self._current_goal_subgraph = goal_subgraph
         
         return inference_image, explorable_value, reason
     
-    def make_plan(self, pano_images, previous_subtask, goal_reason, goal):
+    def make_plan(self, pano_images, previous_subtask, goal_reason, goal, direction_scene_data=None):
         """
-        Enhanced planning using CoT methodology and navigation sequence from goal subgraph.
+        
+        Args:
+            pano_images: Panoramic images (usually the target direction image)
+            previous_subtask: Previous subtask information
+            goal_reason: Reasoning for the current goal direction
+            goal: Target object to navigate to
+            direction_scene_data: Scene graph data from the target direction (from update_curiosity_value)
+                                 Expected format: {
+                                     'spatial_objects': [...],
+                                     'current_graph': {...},
+                                     'vlm_predictions': {...},
+                                     'goal_rotate': int
+                                 }
         """
         try:
-            # Extract scene graph context from goal subgraph
+            # Extract scene graph context from goal subgraph and direction-specific data
             scene_context = ""
-            if hasattr(self, 'goal_subgraph') and self.goal_subgraph:
-                target_rooms = self.goal_subgraph.get('target_rooms', [])
-                if target_rooms:
-                    scene_context += f"Target likely in: {', '.join(target_rooms)}\n"
+            
+            # Add direction-specific scene graph information
+            if direction_scene_data:
+                spatial_objects = direction_scene_data.get('spatial_objects', [])
+                current_graph = direction_scene_data.get('current_graph', {})
+                vlm_predictions = direction_scene_data.get('vlm_predictions', {})
+                goal_rotate = direction_scene_data.get('goal_rotate', 0)
                 
-                visual_cues = self.goal_subgraph.get('visual_cues', [])
-                if visual_cues:
-                    scene_context += f"Look for: {', '.join(visual_cues)}\n"
+                scene_context += f"\nCurrent direction ({goal_rotate * 30}°) scene analysis:\n"
+                
+                # Add spatial objects information
+                if spatial_objects:
+                    obj_names = [obj.get('name', 'unknown') for obj in spatial_objects if isinstance(obj, dict)]
+                    scene_context += f"- Detected objects: {', '.join(obj_names[:5])}\n"  # Show first 5 objects
+                
+                # Add scene graph information
+                if current_graph:
+                    room_nodes = current_graph.get('room_nodes', [])
+                    object_nodes = current_graph.get('object_nodes', [])
+                    if room_nodes:
+                        room_types = [room.get('type', 'unknown') for room in room_nodes if isinstance(room, dict)]
+                        scene_context += f"- Room context: {', '.join(room_types)}\n"
+                    if object_nodes:
+                        nearby_objects = [obj.get('name', 'unknown') for obj in object_nodes[:3] if isinstance(obj, dict)]
+                        scene_context += f"- Nearby objects: {', '.join(nearby_objects)}\n"
+                
+                # Store direction scene data for potential use in action selection
+                self._current_direction_scene_data = direction_scene_data
             
             # Make sure pano_images is in the right format
             planning_images = pano_images
@@ -437,10 +508,11 @@ class CoTGraphAgent(WMNavAgent):
                 "- Visual access points: Doorways/openings that help identify target rooms\n"
                 "- Navigation landmarks: Key reference points for wayfinding\n\n"
                 
-                "3. SPATIAL CONTEXT and OBJECT RELATIONSHIPS:\n"
-                f"- Associated objects: 3-4 items commonly found together with {goal}\n"
-                "- Room indicators: Objects that clearly signal the correct room type\n"
-                f"- Spatial anchors: Fixed reference elements that help locate {goal} precisely\n\n"
+                "3. TARGET-ORIENTED SPATIAL ANCHORS and NAVIGATION CUES:\n"
+                f"- Directional anchors: 3-4 objects that DIRECTLY indicate where {goal} is likely located (not just co-occurring objects)\n"
+                f"- Visual pathways: Objects that form visual lines leading toward typical {goal} placement areas\n"
+                f"- Distance indicators: Objects that help estimate proximity to {goal} based on typical room layouts\n"
+                f"- Positioning cues: Furniture/fixtures that indicate the specific area within a room where {goal} is usually found\n\n"
                 
                 "4. SYSTEMATIC EXPLORATION APPROACH:\n"
                 "- Exploration priorities: Which areas to check first when searching\n"
@@ -461,9 +533,9 @@ class CoTGraphAgent(WMNavAgent):
                 "        'wayfinding_objects': ['stairs', 'kitchen_island', 'main_door']\n"
                 "    },\n"
                 "    'spatial_anchor_objects': {\n"
-                "        'object1': {'name': 'object1', 'correlation': 0.95, 'spatial_relation': 'adjacent_left', 'room_indicator': True},\n"
-                "        'object2': {'name': 'object2', 'correlation': 0.90, 'spatial_relation': 'opposite_wall', 'room_indicator': False},\n"
-                "        'object3': {'name': 'object3', 'correlation': 0.88, 'spatial_relation': 'same_surface', 'room_indicator': True}\n"
+                "        'object1': {'name': 'directional_guide_object1', 'guidance_type': 'points_toward_target', 'proximity_indicator': 'close', 'direction_confidence': 0.95},\n"
+                "        'object2': {'name': 'pathway_marker_object2', 'guidance_type': 'forms_visual_line', 'proximity_indicator': 'medium', 'direction_confidence': 0.90},\n"
+                "        'object3': {'name': 'positioning_reference_object3', 'guidance_type': 'indicates_target_zone', 'proximity_indicator': 'adjacent', 'direction_confidence': 0.88}\n"
                 "    },\n"
                 "    'exploration_strategy': {\n"
                 "        'frontier_priorities': ['unexplored_doorways', 'partial_room_views', 'connecting_passages'],\n"
@@ -492,9 +564,9 @@ class CoTGraphAgent(WMNavAgent):
                 "        'wayfinding_objects': ['staircase', 'kitchen_counter', 'front_door']\n"
                 "    },\n"
                 "    'spatial_anchor_objects': {\n"
-                "        'sofa': {'name': 'sofa', 'correlation': 0.95, 'spatial_relation': 'perpendicular_arrangement', 'room_indicator': True},\n"
-                "        'coffee_table': {'name': 'coffee_table', 'correlation': 0.90, 'spatial_relation': 'centered_between', 'room_indicator': True},\n"
-                "        'tv_stand': {'name': 'tv_stand', 'correlation': 0.85, 'spatial_relation': 'facing_seating', 'room_indicator': False}\n"
+                "        'sofa': {'name': 'sofa', 'guidance_type': 'points_toward_target', 'proximity_indicator': 'adjacent', 'direction_confidence': 0.95},\n"
+                "        'coffee_table': {'name': 'coffee_table', 'guidance_type': 'forms_visual_line', 'proximity_indicator': 'between_agent_and_target', 'direction_confidence': 0.90},\n"
+                "        'side_table': {'name': 'side_table', 'guidance_type': 'indicates_target_zone', 'proximity_indicator': 'immediately_beside', 'direction_confidence': 0.88}\n"
                 "    },\n"
                 "    'exploration_strategy': {\n"
                 "        'frontier_priorities': ['living_room_doorways', 'dining_area_openings', 'bedroom_entrances'],\n"
@@ -518,44 +590,59 @@ class CoTGraphAgent(WMNavAgent):
             
             # Ensure we have a valid dictionary
             if not isinstance(subgraph, dict):
-                print(f"⚠️ LLM response parsing failed for goal: {goal}")
-                logging.error(f"LLM response parsing failed for goal: {goal}")
-                return {}
+                print(f"⚠️ LLM response parsing failed for goal: {goal}, got {type(subgraph)}")
+                logging.error(f"LLM response parsing failed for goal: {goal}, got {type(subgraph)}")
+                # Try to get a fallback goal subgraph
+                subgraph = self._get_fallback_goal_subgraph(goal)
+                if not isinstance(subgraph, dict):
+                    print(f"❌ Fallback subgraph also invalid, returning empty dict")
+                    return {}
             
             # Cache the result to avoid future LLM calls
             self.goal_subgraph_cache[goal] = subgraph
             self.last_cached_goal = goal
             
-            # Update unified memory with hierarchical data
-            self.unified_memory['goal_subgraphs'][goal] = {
-                'data': subgraph,
-                'timestamp': time.time(),
-                'access_count': self.unified_memory['goal_subgraphs'].get(goal, {}).get('access_count', 0) + 1,
-                'type': 'hierarchical_room_aware'
-            }
-            self.unified_memory['goal_subgraphs'][goal] = subgraph
+            # Update unified memory with hierarchical data - ensure it's a dict
+            try:
+                if isinstance(subgraph, dict):
+                    self.unified_memory['goal_subgraphs'][goal] = {
+                        'data': subgraph,
+                        'timestamp': time.time(),
+                        'access_count': self.unified_memory['goal_subgraphs'].get(goal, {}).get('access_count', 0) + 1,
+                        'type': 'hierarchical_room_aware'
+                    }
+                    # Also store directly for backward compatibility
+                    self.unified_memory['goal_subgraphs'][f"{goal}_direct"] = subgraph
+                else:
+                    print(f"⚠️ Cannot update unified memory: subgraph is not a dict ({type(subgraph)})")
+            except Exception as e:
+                print(f"⚠️ Error updating unified memory: {e}")
+                logging.error(f"Unified memory update error: {e}")
             
             print(f"✅ Goal subgraph constructed and cached for: {goal}")
             
-            # Debug: Print key parts of the subgraph with correct field names
-            target_room_hierarchy = subgraph.get('target_room_hierarchy', {})
-            spatial_anchors = subgraph.get('spatial_anchor_objects', {})
-            primary_room = target_room_hierarchy.get('primary_room', 'unknown')
-            secondary_rooms = target_room_hierarchy.get('secondary_rooms', [])
-            
-            print(f"📋 Primary room: {primary_room}")
-            print(f"🏠 Secondary rooms: {list(secondary_rooms) if hasattr(secondary_rooms, '__iter__') and not isinstance(secondary_rooms, str) else [secondary_rooms]}")
-            print(f"🔗 Spatial anchor objects: {len(spatial_anchors)}")
-            
-            # Show anchor objects for debugging  
-            if spatial_anchors:
-                anchor_names = []
-                for key, value in spatial_anchors.items():
-                    if isinstance(value, dict):
-                        anchor_names.append(value.get('name', key))
-                    else:
-                        anchor_names.append(str(key))
-                print(f"⚓ Anchor objects: {anchor_names[:3]}...")
+            # Debug: Print key parts of the subgraph with correct field names and safe access
+            try:
+                target_room_hierarchy = subgraph.get('target_room_hierarchy', {}) if isinstance(subgraph, dict) else {}
+                spatial_anchors = subgraph.get('spatial_anchor_objects', {}) if isinstance(subgraph, dict) else {}
+                primary_room = target_room_hierarchy.get('primary_room', 'unknown') if isinstance(target_room_hierarchy, dict) else 'unknown'
+                secondary_rooms = target_room_hierarchy.get('secondary_rooms', []) if isinstance(target_room_hierarchy, dict) else []
+                
+                print(f"📋 Primary room: {primary_room}")
+                print(f"🏠 Secondary rooms: {list(secondary_rooms) if hasattr(secondary_rooms, '__iter__') and not isinstance(secondary_rooms, str) else [secondary_rooms]}")
+                print(f"🔗 Spatial anchor objects: {len(spatial_anchors) if isinstance(spatial_anchors, dict) else 0}")
+                
+                # Show anchor objects for debugging  
+                if isinstance(spatial_anchors, dict) and spatial_anchors:
+                    anchor_names = []
+                    for key, value in spatial_anchors.items():
+                        if isinstance(value, dict):
+                            anchor_names.append(value.get('name', key))
+                        else:
+                            anchor_names.append(str(key))
+                    print(f"⚓ Anchor objects: {anchor_names[:3]}...")
+            except Exception as e:
+                print(f"⚠️ Error in debug output: {e}")
             
             logging.info(f"Goal subgraph for {goal}: {subgraph}")
             
@@ -679,37 +766,41 @@ class CoTGraphAgent(WMNavAgent):
 
         evaluator_prompt = (
             f"The agent has been tasked with navigating to a {goal.upper()}. The agent has sent you the panoramic image describing your surrounding environment, each image contains a label indicating the relative rotation angle(30, 90, 150, 210, 270, 330) with red fonts. "
-            f"Context for {goal.upper()}: Primary room is {primary}, secondary rooms are {', '.join(secondary) if secondary else 'none'}, adjacent zones include {', '.join(adjacent) if adjacent else 'none'}. Look for primary_room layout with anchor objects in expected positions "
+            f"Context for {goal.upper()}: Primary room is {primary}, secondary rooms are {', '.join(secondary) if secondary else 'none'}, adjacent zones include {', '.join(adjacent) if adjacent else 'none'}. "
             f"Navigation paths: {', '.join(connections_str)}. "
             f"Key landmarks: {', '.join(wayfinding) if wayfinding else 'none'}. "
             f"Spatial anchors to detect: {', '.join(anchor_names) if anchor_names else 'none'}. "
             f"Search priorities: {', '.join(frontiers)}. "
             f"Your job is to assign a score to each direction (0 to 10) indicating how promising it is for finding the {goal}. "
             f"Follow these instructions:\n"
-            f"(1) List all visible objects with their detailed spatial positions:\n"
-            f"   - Use precise positioning: far-left, center-left, center, center-right, far-right\n"
-            f"   - Include depth information: foreground (1-2m), mid-ground (2-4m), background (4m+)\n"
-            f"   - Note spatial relationships between objects (e.g., 'beside', 'on top of', 'under')\n"
-            f"(2) Infer the current room type from furniture and features.\n"
-            f"(3) Identify which spatial anchors are present and describe their spatial relations.\n"
-            f"(4) Estimate the likelihood of finding the {goal} here or in adjacent rooms based on the Room Connections.\n"
-            f"(5) Judge path clarity—ignore closed doors and stairs.\n\n"
+            # f"(1) List all visible objects with their detailed spatial positions:\n"
+            # f"   - Use precise positioning: far-left, center-left, center, center-right, far-right\n"
+            # f"   - Include depth information: foreground (1-2m), mid-ground (2-4m), background (4m+)\n"
+            # f"   - Note spatial relationships between objects (e.g., 'beside', 'on top of', 'under')\n"
+            f"(1) Infer the current room type from furniture and features.\n"
+            # f"(2) Identify anchor objects that can guide navigation toward the {goal}. Focus on objects that indicate proximity to target rooms or provide directional cues. \n"
+            f"(2) Judge path clarity—ignore closed doors and stairs.\n\n"
+            f"(3) Scoring Guidelines:\n"
+            f"   (4a) Only if the {goal} is found in image, assign a score of 10.\n"
+            f"   (4b) If the path is a dead end and it is clear that the target is not in sight, assign a score of 0.\n"
+            f"   (4c) If no goal-related objects are visible but the view leads to an unexplored area (clear turn, open door, hallway), However, if you see objects related to the {goal}, first infer the current room type, then assign a score 1-9 based on how strongly these objects suggest the {goal} can be found nearby. assign a score reflecting your common-sense estimate of finding the {goal} there.Note: a chair must have a backrest and is not a stool; a chair is not a sofa (couch), and a sofa is not a bed.\n"
+            f"   (4d) Treat any clear turn, open door, or unobstructed hallway as an opportunity to explore further—score higher for more promising paths.\n\n"
             f"Json Format:\n"
-            f"{{'30': {{'Score': <0-10>, 'Objects': {{'object1': 'position1 with depth and relationships', 'object2': 'position2 with depth and relationships'}}, "
-            f"'ObjectRelationships': ['obj1 on obj2', 'obj3 beside obj4'], "
-            f"'Anchors': ['anchor1', 'anchor2'], 'Room': 'room_type', 'Path': 'accessibility_assessment', "
-            f"'Explanation': 'An explanation for reasoning based on the current environmental relationships, object spatial context, and navigation cues.'}},\n"
+            f"{{'30': {{'Score': <0-10>, 'Objects': {{'object1': 'object1 position with depth and relationships', 'object2': 'object2 position with depth and relationships'}}, "
+            f"'ObjectRelationships': [spatial relationships between objects], "
+            f"'DirectionalAnchors': ['anchor_objects_that_guide_toward_target'], 'Room': 'room_type', 'Path': 'accessibility_assessment', "
+            f"'Explanation': 'An explanation for your assigned score.'}},\n"
             f" '90': {{...}}, '150': {{...}}, '210': {{...}}, '270': {{...}}, '330': {{...}}}}\n\n"
             f"Answer Example:\n"
             f"{{\n"
             f" '30': {{'Score': 1, 'Objects': {{'recliner': 'center-right foreground beside sofa', 'side_table': 'right_edge mid-ground'}}, "
-            f"'ObjectRelationships': ['recliner beside sofa'], 'Anchors': ['recliner'], 'Room': 'living_room', 'Path': 'Dead end', "
+            f"'ObjectRelationships': ['recliner beside sofa'], 'DirectionalAnchors': ['side_table points toward bedroom'], 'Room': 'living_room', 'Path': 'Dead end', "
             f"'Explanation': 'Seating corner in the living room with furniture but no pathways. No access to adjacent rooms.'}},\n"
             f" '90': {{'Score': 3, 'Objects': {{'dining_table': 'center mid-ground', 'chairs': 'perimeter foreground'}}, "
-            f"'ObjectRelationships': ['dining_table surrounded by chairs'], 'Anchors': ['chairs'], 'Room': 'dining_area', 'Path': 'Clear doorway', "
+            f"'ObjectRelationships': ['dining_table surrounded by chairs'], 'DirectionalAnchors': ['dining_table indicates dining_room area'], 'Room': 'dining_area', 'Path': 'Clear doorway', "
             f"'Explanation': 'Dining room with proper furniture and accessible doorway.'}},\n"
             f" '150': {{'Score': 6, 'Objects': {{'flooring': 'bottom background', 'door_frame': 'far_end mid-ground'}}, "
-            f"'ObjectRelationships': ['door_frame facing corridor'], 'Anchors': ['door_frame'], 'Room': 'hallway', 'Path': 'Unobstructed passage', "
+            f"'ObjectRelationships': ['door_frame facing corridor'], 'DirectionalAnchors': ['door_frame leads toward target rooms'], 'Room': 'hallway', 'Path': 'Unobstructed passage', "
             f"'Explanation': 'Hallway connecting multiple rooms, with clear passage.'}},\n"
             f" ...\n"
             f"}}"
@@ -795,31 +886,48 @@ class CoTGraphAgent(WMNavAgent):
                 }
             else:
                 # Extract detailed spatial information from structured VLM data
-                objects, spatial_relations, room_type, spatial_anchors_detected = self._extract_spatial_details(vlm_predictions[direction])
+                direction_data = vlm_predictions[direction]
+                
+                # Ensure direction_data is a dictionary before processing
+                if not isinstance(direction_data, dict):
+                    print(f"⚠️ Direction {direction} data is not a dict (type: {type(direction_data)}), creating default structure")
+                    vlm_predictions[direction] = {
+                        'Score': 3.0,
+                        'Objects': {},
+                        'Anchors': [],
+                        'Room': 'unknown',
+                        'Likelihood': 'moderate',
+                        'Path': 'unclear',
+                        'Explanation': f'Non-dict data converted for direction {direction}: {str(direction_data)[:100]}...'
+                    }
+                    direction_data = vlm_predictions[direction]
+                
+                objects, spatial_relations, room_type, spatial_anchors_detected = self._extract_spatial_details(direction_data)
                 
                 # Get explanation for compatibility checks
-                explanation = vlm_predictions[direction].get('Explanation', '')
-                likelihood = vlm_predictions[direction].get('Likelihood', '')
-                path_info = vlm_predictions[direction].get('Path', '')
+                explanation = direction_data.get('Explanation', '') if isinstance(direction_data, dict) else ''
+                likelihood = direction_data.get('Likelihood', '') if isinstance(direction_data, dict) else ''
+                path_info = direction_data.get('Path', '') if isinstance(direction_data, dict) else ''
                 
                 # Normalize structured data using existing normalization methods
-                objects_dict = vlm_predictions[direction].get('Objects', {})
+                objects_dict = direction_data.get('Objects', {}) if isinstance(direction_data, dict) else {}
                 objects_list = self._normalize_subgraph_data(objects_dict, 'list') if objects_dict else objects
                 
-                anchors_set = vlm_predictions[direction].get('Anchors', set())
+                anchors_set = direction_data.get('Anchors', set()) if isinstance(direction_data, dict) else set()
                 anchors_list = self._normalize_subgraph_data(anchors_set, 'list')
                 
                 # Enhance prediction with extracted spatial data
-                vlm_predictions[direction].update({
-                    'objects': objects_list,
-                    'spatial_relations': spatial_relations, 
-                    'room_type': vlm_predictions[direction].get('Room', room_type),
-                    'accessibility': 'accessible' if any(keyword in path_info.lower() + explanation.lower() 
-                                                       for keyword in ['clear', 'unobstructed', 'open']) else 'unclear',
-                    'target_visible': goal.lower() in explanation.lower(),
-                    'spatial_anchors_detected': spatial_anchors_detected if spatial_anchors_detected else anchors_list,
-                    'goal_likelihood': self._extract_likelihood_from_data(vlm_predictions[direction], explanation)
-                })
+                if isinstance(direction_data, dict):
+                    direction_data.update({
+                        'objects': objects_list,
+                        'spatial_relations': spatial_relations, 
+                        'room_type': direction_data.get('Room', room_type),
+                        'accessibility': 'accessible' if any(keyword in path_info.lower() + explanation.lower() 
+                                                           for keyword in ['clear', 'unobstructed', 'open']) else 'unclear',
+                        'target_visible': goal.lower() in explanation.lower(),
+                        'spatial_anchors_detected': spatial_anchors_detected if spatial_anchors_detected else anchors_list,
+                        'goal_likelihood': self._extract_likelihood_from_data(direction_data, explanation)
+                    })
         
         print(f"🏠 VLM analysis complete: {len([d for d in vlm_predictions.keys() if isinstance(vlm_predictions[d], dict) and vlm_predictions[d].get('Score', 0) > 5])} high-score directions")
         
@@ -933,8 +1041,13 @@ class CoTGraphAgent(WMNavAgent):
         """
         Extract goal likelihood from structured VLM data or explanation
         """
+        # Ensure direction_data is a dictionary
+        if not isinstance(direction_data, dict):
+            print(f"⚠️ Warning: direction_data is not a dict in _extract_likelihood_from_data (type: {type(direction_data)})")
+            direction_data = {}
+            
         # First try structured Likelihood field
-        likelihood = direction_data.get('Likelihood', '').lower()
+        likelihood = direction_data.get('Likelihood', '').lower() if isinstance(direction_data, dict) else ''
         
         if 'high' in likelihood:
             return 'high'
@@ -944,7 +1057,7 @@ class CoTGraphAgent(WMNavAgent):
             return 'low'
         else:
             # Fallback to explanation analysis
-            explanation_lower = explanation.lower()
+            explanation_lower = explanation.lower() if isinstance(explanation, str) else ''
             if 'high' in explanation_lower:
                 return 'high'
             elif 'moderate' in explanation_lower or 'medium' in explanation_lower:
@@ -1164,22 +1277,57 @@ class CoTGraphAgent(WMNavAgent):
                 'summary': {'total_objects': 0, 'total_spatial_anchors': 0}
             }
 
-    def _get_exploration_phase_description(self, strategy: str, overlap_score: float) -> str:
+    def _get_exploration_phase_description(self, avg_overlap: float, max_overlap: float) -> dict:
         """
-        Generate natural exploration phase description without technical jargon
+        根据重叠分数确定探索阶段和推理策略
+        
+        Args:
+            avg_overlap: 各方向平均重叠分数 (0.0-1.0)
+            max_overlap: 最高重叠分数 (0.0-1.0)
+            
+        Returns:
+            dict containing:
+                - phase_name: exploration phase identifier
+                - reasoning_strategy: detailed strategy description
+                - weight_adjustments: suggested weight modifications
         """
-        if strategy == 'frontier_exploration':
-            return f"""Currently in BROAD EXPLORATION mode - the current environment shows low similarity to typical {self.current_subtask or 'target'} locations. Focus on finding new rooms and areas that might contain the target."""
-        elif strategy == 'anchor_alignment':
-            return f"""Currently in FOCUSED SEARCH mode - some relevant objects have been identified, suggesting we're getting closer to the target area. Navigate toward regions with higher object relevance."""
-        elif strategy == 'target_verification':
-            return f"""Currently in TARGET VERIFICATION mode - high similarity detected, likely very close to or at the target location. Focus on precise localization and confirmation."""
+        if max_overlap >= 0.7:
+            # High overlap - target verification mode
+            return {
+                'phase_name': 'TARGET_VERIFICATION',
+                'reasoning_strategy': 'High semantic similarity detected - likely very close to target. Focus on precise localization and target confirmation.',
+                'weight_adjustments': {
+                    'semantic_weight': 0.5,  # Increase semantic influence
+                    'spatial_weight': 0.8,   # Reduce spatial weight
+                    'llm_weight': 0.2        # Moderate LLM weight
+                }
+            }
+        elif avg_overlap >= 0.4 or max_overlap >= 0.5:
+            # Medium overlap - focused navigation
+            return {
+                'phase_name': 'FOCUSED_SEARCH',
+                'reasoning_strategy': 'Moderate semantic alignment found - target area likely nearby. Navigate toward directions with highest semantic relevance.',
+                'weight_adjustments': {
+                    'semantic_weight': 0.4,  # Balanced semantic influence
+                    'spatial_weight': 0.6,   # Balanced spatial weight  
+                    'llm_weight': 0.4        # Standard LLM weight
+                }
+            }
         else:
-            return f"""Standard exploration mode with context similarity of {overlap_score:.2f}. Use available visual cues to guide navigation decisions."""
+            # Low overlap - frontier exploration
+            return {
+                'phase_name': 'FRONTIER_EXPLORATION', 
+                'reasoning_strategy': 'Low semantic similarity - broad exploration needed. Prioritize discovering new areas and rooms that might contain target.',
+                'weight_adjustments': {
+                    'semantic_weight': 0.1,  # Reduce semantic influence
+                    'spatial_weight': 0.6,   # Increase spatial exploration
+                    'llm_weight': 0.5        # Increase LLM reasoning weight
+                }
+            }
 
     def _update_collaborative_memory(self, goal: str, goal_subgraph: Dict, vlm_predictions: Dict, final_predictions: Dict):
         """
-        Enhanced collaborative memory update with position tracking for stuck detection
+        简化版协作记忆更新 - 保留核心跟踪功能
         """
         try:
             # Extract current agent position if available
@@ -1287,7 +1435,26 @@ class CoTGraphAgent(WMNavAgent):
                     eval_resp = ast.literal_eval(extracted)
                     if isinstance(eval_resp, dict):
                         print(f"✅ Successfully parsed with {pattern_name} using ast.literal_eval")
-                        return eval_resp
+                        
+                        # Check what type of data we got
+                        expected_directions = ['30', '90', '150', '210', '270', '330']
+                        direction_keys = [k for k in eval_resp.keys() if k in expected_directions]
+                        
+                        # Check for goal subgraph indicators
+                        subgraph_indicators = ['target_room_hierarchy', 'spatial_anchor_objects', 'hallway_navigation', 'exploration_strategy']
+                        subgraph_keys = [k for k in eval_resp.keys() if k in subgraph_indicators]
+                        
+                        if len(direction_keys) >= 3:  # Directional VLM data
+                            print(f"✅ Confirmed directional data with {len(direction_keys)} directions")
+                            return eval_resp
+                        elif len(subgraph_keys) >= 2:  # Goal subgraph data
+                            print(f"✅ Confirmed goal subgraph data with keys: {subgraph_keys}")
+                            return eval_resp
+                        elif len(eval_resp) > 0:  # Any valid dictionary
+                            print(f"✅ Valid dictionary data with {len(eval_resp)} keys: {list(eval_resp.keys())[:5]}")
+                            return eval_resp
+                        else:
+                            print(f"⚠️ Empty dictionary, continuing search...")
                 except (ValueError, SyntaxError) as e:
                     print(f"   ast.literal_eval failed for {pattern_name}: {e}")
                 
@@ -1297,7 +1464,26 @@ class CoTGraphAgent(WMNavAgent):
                     eval_resp = json.loads(json_str)
                     if isinstance(eval_resp, dict):
                         print(f"✅ Successfully parsed with {pattern_name} using json.loads")
-                        return eval_resp
+                        
+                        # Check what type of data we got
+                        expected_directions = ['30', '90', '150', '210', '270', '330']
+                        direction_keys = [k for k in eval_resp.keys() if k in expected_directions]
+                        
+                        # Check for goal subgraph indicators
+                        subgraph_indicators = ['target_room_hierarchy', 'spatial_anchor_objects', 'hallway_navigation', 'exploration_strategy']
+                        subgraph_keys = [k for k in eval_resp.keys() if k in subgraph_indicators]
+                        
+                        if len(direction_keys) >= 3:  # Directional VLM data
+                            print(f"✅ Confirmed directional data with {len(direction_keys)} directions")
+                            return eval_resp
+                        elif len(subgraph_keys) >= 2:  # Goal subgraph data
+                            print(f"✅ Confirmed goal subgraph data with keys: {subgraph_keys}")
+                            return eval_resp
+                        elif len(eval_resp) > 0:  # Any valid dictionary
+                            print(f"✅ Valid dictionary data with {len(eval_resp)} keys: {list(eval_resp.keys())[:5]}")
+                            return eval_resp
+                        else:
+                            print(f"⚠️ Empty dictionary, continuing search...")
                 except json.JSONDecodeError as e:
                     print(f"   json.loads failed for {pattern_name}: {e}")
                     
@@ -1305,13 +1491,19 @@ class CoTGraphAgent(WMNavAgent):
                 print(f"   Pattern {pattern_name} extraction failed: {e}")
                 continue
         
-        # Strategy 2: Regex-based key-value extraction for malformed JSON
-        print("🔧 Attempting regex-based key-value extraction...")
+        # Strategy 2: Regex-based key-value extraction for malformed JSON (only as last resort)
+        print("🔧 Attempting regex-based key-value extraction as last resort...")
         try:
             extracted_dict = self._regex_extract_dict(result)
             if extracted_dict:
-                print(f"✅ Successfully extracted via regex: {len(extracted_dict)} keys")
-                return extracted_dict
+                # Check if we got valid directional data
+                expected_directions = ['30', '90', '150', '210', '270', '330']
+                direction_keys = [k for k in extracted_dict.keys() if k in expected_directions]
+                if len(direction_keys) >= 3:
+                    print(f"✅ Successfully extracted via regex: {len(extracted_dict)} keys with {len(direction_keys)} directions")
+                    return extracted_dict
+                else:
+                    print(f"⚠️ Regex extraction didn't yield directional data")
         except Exception as e:
             print(f"   Regex extraction failed: {e}")
         
@@ -1411,13 +1603,14 @@ class CoTGraphAgent(WMNavAgent):
             return max_content
 
     def _regex_extract_dict(self, text: str) -> Dict:
-        """Extract dictionary from text using regex patterns"""
+        """Extract dictionary from text using regex patterns with proper nested structure handling"""
         import re
+        import ast
         result_dict = {}
         
-        # Pattern for key-value pairs like 'key': 'value' or 'key': number
-        kv_pattern = r"'([^']+)':\s*(?:'([^']*)'|(\d+\.?\d*)|(\{[^}]*\})|(\[[^\]]*\]))"
-        matches = re.findall(kv_pattern, text)
+        # Enhanced pattern for better nested structure matching
+        kv_pattern = r"'([^']+)':\s*(?:'([^']*)'|(\d+\.?\d*)|(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})|(\[[^\]]*\]))"
+        matches = re.findall(kv_pattern, text, re.DOTALL)
         
         for match in matches:
             key = match[0]
@@ -1428,10 +1621,71 @@ class CoTGraphAgent(WMNavAgent):
                     result_dict[key] = float(match[2]) if '.' in match[2] else int(match[2])
                 except ValueError:
                     result_dict[key] = match[2]
-            elif match[3]:  # dict value
-                result_dict[key] = match[3]
-            elif match[4]:  # list value
-                result_dict[key] = match[4]
+            elif match[3]:  # dict value - parse it properly
+                dict_str = match[3]
+                try:
+                    # Clean the dict string before parsing to fix common VLM errors
+                    dict_str_cleaned = self._clean_dict_string(dict_str)
+                    parsed_dict = ast.literal_eval(dict_str_cleaned)
+                    result_dict[key] = parsed_dict
+                    print(f"   ✅ Successfully parsed nested dict for key '{key}': {type(parsed_dict)}")
+                except (ValueError, SyntaxError) as e:
+                    print(f"   ⚠️ Failed to parse nested dict for key '{key}': {e}")
+                    # Try alternative parsing approaches
+                    try:
+                        # Remove problematic patterns and try again
+                        dict_str_fixed = self._fix_malformed_dict_string(dict_str)
+                        if dict_str_fixed:
+                            parsed_dict = ast.literal_eval(dict_str_fixed)
+                            result_dict[key] = parsed_dict
+                            print(f"   ✅ Successfully parsed after fixing for key '{key}': {type(parsed_dict)}")
+                        else:
+                            # Store as string if cannot parse
+                            result_dict[key] = dict_str
+                    except Exception as e2:
+                        print(f"   ❌ Final attempt failed for key '{key}': {e2}")
+                        result_dict[key] = dict_str
+            elif match[4]:  # list value - parse it properly
+                list_str = match[4]
+                try:
+                    parsed_list = ast.literal_eval(list_str)
+                    result_dict[key] = parsed_list
+                    print(f"   ✅ Successfully parsed list for key '{key}': {type(parsed_list)}")
+                except (ValueError, SyntaxError) as e:
+                    print(f"   ⚠️ Failed to parse list for key '{key}': {e}")
+                    # Fallback: store as string
+                    result_dict[key] = list_str
+        
+        # Additional validation: check if we got direction keys with dict values
+        expected_directions = ['30', '90', '150', '210', '270', '330']
+        direction_keys = [k for k in result_dict.keys() if k in expected_directions]
+        
+        if direction_keys:
+            print(f"🎯 Found {len(direction_keys)} direction keys in regex extraction")
+            for direction in direction_keys:
+                direction_data = result_dict[direction]
+                if isinstance(direction_data, str):
+                    print(f"⚠️ Direction {direction} is still a string, attempting enhanced parsing...")
+                    # Use the new enhanced parsing method
+                    try:
+                        parsed_data = self._clean_and_parse_direction_string(direction_data)
+                        if isinstance(parsed_data, dict):
+                            result_dict[direction] = parsed_data
+                            print(f"   ✅ Successfully converted direction {direction} to dict")
+                        else:
+                            print(f"   ⚠️ Enhanced parsing for {direction} returned non-dict: {type(parsed_data)}")
+                    except Exception as e:
+                        print(f"   ❌ Enhanced parsing failed for direction {direction}: {e}")
+                        # Fallback to original method
+                        try:
+                            parsed_data = ast.literal_eval(direction_data)
+                            if isinstance(parsed_data, dict):
+                                result_dict[direction] = parsed_data
+                                print(f"   ✅ Fallback parsing worked for direction {direction}")
+                        except Exception as e2:
+                            print(f"   ❌ All parsing methods failed for direction {direction}: {e2}")
+                elif isinstance(direction_data, dict):
+                    print(f"   ✅ Direction {direction} is already a dict with keys: {list(direction_data.keys())}")
         
         return result_dict
 
@@ -1467,6 +1721,130 @@ class CoTGraphAgent(WMNavAgent):
         
         return result_dict
 
+    def _clean_dict_string(self, dict_str: str) -> str:
+        """Clean dictionary string to fix common VLM formatting issues"""
+        import re
+        
+        # Fix duplicate keys like 'Score': 6, 'Score': 'Score': 6
+        dict_str = re.sub(r"'Score':\s*\d+,\s*'Score':\s*'Score':\s*\d+", 
+                         lambda m: "'Score': " + re.search(r'\d+', m.group()).group(), dict_str)
+        
+        # Fix other duplicate key patterns  
+        dict_str = re.sub(r"'(\w+)':\s*([^,}]+),\s*'\1':\s*'\1':\s*([^,}]+)", r"'\1': \2", dict_str)
+        
+        # Fix trailing commas before closing braces
+        dict_str = re.sub(r',\s*}', '}', dict_str)
+        
+        # Fix multiple consecutive commas
+        dict_str = re.sub(r',\s*,+', ',', dict_str)
+        
+        return dict_str.strip()
+
+    def _fix_malformed_dict_string(self, dict_str: str) -> str:
+        """Try to fix malformed dictionary strings with more aggressive cleaning"""
+        import re
+        
+        try:
+            # More aggressive cleaning
+            dict_str = dict_str.strip()
+            
+            # Remove problematic duplicate key patterns entirely
+            dict_str = re.sub(r"'Score':\s*'Score':\s*\d+", "'Score': 0", dict_str)
+            dict_str = re.sub(r"'(\w+)':\s*'\1':\s*([^,}]+)", r"'\1': \2", dict_str)
+            
+            # Fix missing quotes around keys (be more careful with context)
+            dict_str = re.sub(r'(\w+):\s*\{', r"'\1': {", dict_str)  # Fix keys before nested dicts
+            dict_str = re.sub(r'(\w+):\s*\'([^\']*)\'\s*([,}])', r"'\1': '\2'\3", dict_str)  # quoted values
+            dict_str = re.sub(r'(\w+):\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*([,}])', r"'\1': '\2'\3", dict_str)  # unquoted values
+            
+            # Fix nested object issues - ensure quotes around object keys/values
+            dict_str = re.sub(r'\{\s*([a-zA-Z_][a-zA-Z0-9_]*):\s*([a-zA-Z_][a-zA-Z0-9_]*)', r"{ '\1': '\2'", dict_str)
+            dict_str = re.sub(r',\s*([a-zA-Z_][a-zA-Z0-9_]*):\s*([a-zA-Z_][a-zA-Z0-9_]*)', r", '\1': '\2'", dict_str)
+            
+            # Fix trailing issues
+            dict_str = re.sub(r',\s*}', '}', dict_str)
+            dict_str = re.sub(r',\s*,+', ',', dict_str)
+            
+            # Basic validation - must start with { and end with }
+            if not dict_str.startswith('{') or not dict_str.endswith('}'):
+                return None
+                
+            return dict_str.strip()
+            
+        except Exception as e:
+            print(f"   Error in fix_malformed_dict_string: {e}")
+            return None
+
+    def _clean_and_parse_direction_string(self, direction_str: str) -> dict:
+        """Enhanced cleaning and parsing for direction data strings"""
+        import re
+        import ast
+        
+        try:
+            # Apply all cleaning strategies
+            cleaned = self._clean_dict_string(direction_str)
+            
+            # Try parsing the cleaned version
+            try:
+                return ast.literal_eval(cleaned)
+            except:
+                # If that fails, try more aggressive fixing
+                fixed = self._fix_malformed_dict_string(direction_str)
+                if fixed:
+                    return ast.literal_eval(fixed)
+                else:
+                    # Final attempt: extract key-value pairs manually
+                    return self._manual_dict_extraction(direction_str)
+                    
+        except Exception as e:
+            print(f"   Error in clean_and_parse_direction_string: {e}")
+            return direction_str  # Return original if all fails
+
+    def _manual_dict_extraction(self, text: str) -> dict:
+        """Manually extract dictionary from problematic text"""
+        import re
+        
+        result = {}
+        
+        # Extract Score (handle various formats)
+        score_match = re.search(r"(?:'Score'|Score):\s*(\d+)", text)
+        if score_match:
+            result['Score'] = int(score_match.group(1))
+        
+        # Extract Objects (handle various formats)
+        objects_match = re.search(r"(?:'Objects'|Objects):\s*\{([^}]+)\}", text)
+        if objects_match:
+            objects_text = objects_match.group(1)
+            objects = {}
+            
+            # Try different patterns for object entries
+            for obj_match in re.finditer(r"'([^']+)':\s*'([^']*)'", objects_text):
+                objects[obj_match.group(1)] = obj_match.group(2)
+            
+            # Handle unquoted keys/values
+            if not objects:  # If no quoted matches found
+                for obj_match in re.finditer(r"([a-zA-Z_][a-zA-Z0-9_]*):\s*([a-zA-Z_][a-zA-Z0-9_]*)", objects_text):
+                    objects[obj_match.group(1)] = obj_match.group(2)
+            
+            result['Objects'] = objects
+        
+        # Extract Room (handle various formats)
+        room_match = re.search(r"(?:'Room'|Room):\s*(?:'([^']*)'|([a-zA-Z\s]+))(?:,|$|\})", text)
+        if room_match:
+            result['Room'] = room_match.group(1) if room_match.group(1) else room_match.group(2).strip()
+        
+        # Extract Path (handle various formats)
+        path_match = re.search(r"(?:'Path'|Path):\s*(?:'([^']*)'|([a-zA-Z\s]+))(?:,|$|\})", text)
+        if path_match:
+            result['Path'] = path_match.group(1) if path_match.group(1) else path_match.group(2).strip()
+            
+        # Extract Explanation (handle various formats)
+        explanation_match = re.search(r"(?:'Explanation'|Explanation):\s*(?:'([^']*)'|([a-zA-Z\s]+))(?:,|$|\})", text)
+        if explanation_match:
+            result['Explanation'] = explanation_match.group(1) if explanation_match.group(1) else explanation_match.group(2).strip()
+        
+        return result if result else text
+
 
     def _construct_prompt(self, goal=None, prompt_type=None, subtask='{}', reason='{}', 
                          num_actions=0, scene_graph_context=None, **kwargs):
@@ -1498,76 +1876,95 @@ class CoTGraphAgent(WMNavAgent):
         if prompt_type == 'predicting':
             # Original predicting prompt implementation with optional scene context
             prompt = super()._construct_prompt(goal=goal, prompt_type=prompt_type)
-            if scene_graph_context:
-                # Add scene graph context if provided
-                prompt = prompt.replace(
-                    "analyze this panoramic image", 
-                    f"analyze this panoramic image with the following context:\n{scene_graph_context}\n"
-                )
             return prompt
                 
         if prompt_type == 'planning':
-            # Enhanced planning prompt with navigation sequence integration
-            nav_sequence = []
-            if hasattr(self, 'goal_subgraph') and self.goal_subgraph:
-                nav_sequence = self.goal_subgraph.get('navigation_sequence', [])
-                    
-            # Integrate navigation sequence into planning prompt
-            nav_context = ""
-            if nav_sequence:
-                nav_steps = "\n".join([f"- {step}" for step in nav_sequence])
-                nav_context = f"\nNavigation guidance for finding {goal}:\n{nav_steps}\n"
-                
-            # Add scene graph context if provided
-            scene_context = f"\nScene context:\n{scene_graph_context}" if scene_graph_context else ""
-            
             if reason != '' and subtask != '{}':
-                return f"""The agent has been tasked with navigating to a {goal.upper()}. The agent has sent you the following elements:
-                (1)<The observed image>: The image taken from its current location.
-                (2){reason}. This explains why you should go in this direction.
-                
-                Previous subtask: {subtask}
-                Current reasoning: {reason}{nav_context}{scene_context}
-                
-                Your job is to determine if the goal is visible and describe the next place to go.
-                
-                To help you plan your best next step, follow these guidelines:
-                (1) If the {goal} appears in the image, directly choose the target as the next step in the plan. Note a chair must have a backrest and a chair is not a stool. Note a chair is NOT sofa(couch) which is NOT a bed.
-                (2) If the {goal} is not found and the previous subtask {subtask} has not completed, continue to complete the last subtask.
-                (3) If the {goal} is not found and the previous subtask has already been completed, identify a new subtask based on:
-                - What room types typically contain {goal}?
-                - Which visible pathways (hallways, open doors) might lead to those rooms?
-                - What visual cues suggest promising directions?
-                
-                Note: Pay special attention to open doors and hallways as they can lead to unseen rooms. GOING UP OR DOWN STAIRS is an option.
-                
-                Format your answer in the json {{'Subtask': <Where you are going next>, 'Flag': <Whether the target is in your view, True or False>}}.
-                Answer Example: {{'Subtask': 'Go to the hallway', 'Flag': False}} or {{'Subtask': 'Go to the {goal}', 'Flag': True}} or {{'Subtask': 'Go to the open door', 'Flag': True}}
-                """
+                planning_prompt = (f"The agent has been tasked with navigating to a {goal.upper()}. The agent has sent you the following elements:"
+                f"(1)<The observed image>: The image taken from its current location. "
+                f"(2){reason}. This explains why you should go in this direction. "
+                f'Your job is to describe next place to go. '
+                f'To help you plan your best next step, I can give you some human suggestions:. '
+                f'(1) If the {goal} appears in the image, directly choose the target as the next step in the plan. Note a chair must have a backrest and a chair is not a stool. Note a chair is NOT sofa(couch) which is NOT a bed. '
+                f'(2) If the {goal} is not found and the previous subtask {subtask} has not completed, continue to complete the last subtask {subtask} that has not been completed.'
+                f'(3) If the {goal} is not found and the previous subtask {subtask} has already been completed. Identify a new subtask by describing where you are going next to be more likely to find clues to the the {goal} and think about whether the {goal} is likely to occur in that direction. Note you need to pay special attention to open doors and hallways, as they can lead to other unseen rooms. Note GOING UP OR DOWN STAIRS is an option. '
+                "Format your answer in the json {{'Subtask': <Where you are going next>, 'Flag': <Whether the target is in your view, True or False>}}. "
+                "Answer Example: {{'Subtask': 'Go to the hallway', 'Flag': False}} or {{'Subtask': "+f"'Go to the {goal}'"+", 'Flag': True}} or {{'Subtask': 'Go to the open door', 'Flag': True}}")
             else:
-                return f"""The agent has been tasked with navigating to a {goal.upper()}. The agent has sent you an image taken from its current location.
-        
-                {nav_context}{scene_context}
-                
-                Your job is to determine if the goal is visible and describe the next place to go.
-                
-                To help you plan your best next step, follow these guidelines:
-                (1) If the {goal} appears in the image, directly choose the target as the next step in the plan. Note a chair must have a backrest and a chair is not a stool. Note a chair is NOT sofa(couch) which is NOT a bed.
-                (2) If the {goal} is not found, analyze the room type and consider:
-                - What room types typically contain {goal}?
-                - Which visible pathways (hallways, open doors) might lead to those rooms?
-                - What visual cues suggest promising directions?
-                
-                Note: Pay special attention to open doors and hallways as they can lead to unseen rooms. GOING UP OR DOWN STAIRS is an option.
-                
-                Format your answer in the json {{'Subtask': <Where you are going next>, 'Flag': <Whether the target is in your view, True or False>}}.
-                Answer Example: {{'Subtask': 'Go to the hallway', 'Flag': False}} or {{'Subtask': 'Go to the {goal}', 'Flag': True}} or {{'Subtask': 'Go to the open door', 'Flag': True}}
-                """
+                planning_prompt = (f"The agent has been tasked with navigating to a {goal.upper()}. The agent has sent you an image taken from its current location."
+                f'Your job is to describe next place to go. '
+                f'To help you plan your best next step, I can give you some human suggestions:. '
+                f'(1) If the {goal} appears in the image, directly choose the target as the next step in the plan. Note a chair must have a backrest and a chair is not a stool. Note a chair is NOT sofa(couch) which is NOT a bed. '
+                f'(2) If the {goal} is not found, describe where you are going next to be more likely to find clues to the the {goal} and analyze the room type and think about whether the {goal} is likely to occur in that direction. Note you need to pay special attention to open doors and hallways, as they can lead to other unseen rooms. Note GOING UP OR DOWN STAIRS is an option. '
+                "Format your answer in the json {{'Subtask': <Where you are going next>, 'Flag': <Whether the target is in your view, True or False>}}. "
+                "Answer Example: {{'Subtask': 'Go to the hallway', 'Flag': False}} or {{'Subtask': "+f"'Go to the {goal}'"+", 'Flag': True}} or {{'Subtask': 'Go to the open door', 'Flag': True}}")
+            return planning_prompt
                 
         if prompt_type == 'action':
-            # Original action prompt implementation
-            return super()._construct_prompt(goal=goal, prompt_type=prompt_type, 
-                                            subtask=subtask, num_actions=num_actions)
+            # Enhanced action prompt with VLM object position information
+            scene_objects_context = ""
+            
+            # Check if we have current direction scene data
+            if hasattr(self, '_current_direction_scene_data') and self._current_direction_scene_data:
+                direction_data = self._current_direction_scene_data
+                spatial_objects = direction_data.get('spatial_objects', [])
+                vlm_predictions = direction_data.get('vlm_predictions', {})
+                goal_rotate = direction_data.get('goal_rotate', 0)
+                
+                # Build scene objects context
+                if spatial_objects or vlm_predictions:
+                    scene_objects_context = f"\n\n🎯 SCENE ANALYSIS for current direction ({goal_rotate * 30}°):\n"
+                    
+                    # Add VLM detected objects with positions
+                    vlm_objects = vlm_predictions.get('Objects', vlm_predictions.get('objects', {}))
+                    if isinstance(vlm_objects, dict) and vlm_objects:
+                        scene_objects_context += "📍 Detected Objects and Their Locations:\n"
+                        for obj_name, obj_data in vlm_objects.items():
+                            if isinstance(obj_data, dict):
+                                position = obj_data.get('position', 'unknown')
+                                likelihood = obj_data.get('likelihood', obj_data.get('score', 'unknown'))
+                                scene_objects_context += f"  - {obj_name}: position={position}, confidence={likelihood}\n"
+                    
+                    # Add spatial objects information
+                    if spatial_objects:
+                        scene_objects_context += "\n🗺️ Spatial Object Mapping:\n"
+                        for i, obj in enumerate(spatial_objects[:5]):  # Show first 5 objects
+                            if isinstance(obj, dict):
+                                obj_name = obj.get('name', f'object_{i}')
+                                obj_pos = obj.get('position', 'unknown')
+                                obj_type = obj.get('type', 'unknown')
+                                scene_objects_context += f"  - {obj_name} ({obj_type}): spatial_pos={obj_pos}\n"
+                    
+                    # Add goal-related analysis if available
+                    current_graph = direction_data.get('current_graph', {})
+                    if current_graph:
+                        room_context = current_graph.get('room_nodes', [])
+                        if room_context:
+                            room_types = [room.get('type', 'unknown') for room in room_context if isinstance(room, dict)]
+                            scene_objects_context += f"\n🏠 Room Context: {', '.join(room_types)}\n"
+                    
+                    scene_objects_context += f"\n💡 Use this spatial information to make more informed navigation decisions!\n"
+            
+            # Original action prompt with enhanced context
+            if subtask != '{}':
+                action_prompt = (
+                f"TASK: {subtask}. Your final task is to NAVIGATE TO THE NEAREST {goal.upper()}, and get as close to it as possible. "
+                f"There are {num_actions - 1} red arrows superimposed onto your observation, which represent potential actions. " 
+                f"These are labeled with a number in a white circle, which represent the location you would move to if you took that action. {'NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. ' if self.step_ndx - self.turned >= self.cfg['turn_around_cooldown'] else ''}"
+                f"In order to complete the subtask {subtask} and eventually the final task NAVIGATING TO THE NEAREST {goal.upper()}. Explain which action acheives that best. "
+                f"{scene_objects_context}"
+                "Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS"
+                )
+            else:
+                action_prompt = (
+                    f"TASK: NAVIGATE TO THE NEAREST {goal.upper()}, and get as close to it as possible. Use your prior knowledge about where items are typically located within a home. "
+                    f"There are {num_actions - 1} red arrows superimposed onto your observation, which represent potential actions. "
+                    f"These are labeled with a number in a white circle, which represent the location you would move to if you took that action. {'NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. ' if self.step_ndx - self.turned >= self.cfg['turn_around_cooldown'] else ''}"
+                    f"First, tell me what you see in your sensor observation, and if you have any leads on finding the {goal.upper()}. Second, tell me which general direction you should go in. "
+                    f"{scene_objects_context}"
+                    "Lastly, explain which action acheives that best, and return it as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS"
+                )
+            return action_prompt
                 
     def update_curiosity_value(self, explorable_value, reason, vlm_predictions=None, goal_subgraph=None):
         """
@@ -1619,8 +2016,15 @@ class CoTGraphAgent(WMNavAgent):
             current_graph = self._build_current_scene_graph(spatial_objects, direction)
             
             # === 阶段4: UniGoal风格图重叠计算（直接使用LLM目标子图）===
+            # 提取当前方向的VLM对象数据
+            direction_vlm_data = vlm_predictions.get(direction_str, {}) if isinstance(vlm_predictions, dict) else {}
+            direction_objects = direction_vlm_data.get('Objects', direction_vlm_data.get('objects', {})) if isinstance(direction_vlm_data, dict) else {}
+            
+            # 为重叠计算创建方向特定的vlm_objects字典
+            direction_specific_vlm_objects = {direction_str: direction_vlm_data} if direction_vlm_data else {}
+            
             overlap_result = self._calculate_graph_overlap_score_with_subgraph(
-                vlm_predictions, goal_subgraph, direction, reason=reason
+                direction_specific_vlm_objects, goal_subgraph, direction, reason=reason
             )
             overlap_score = overlap_result.get('overlap_score', 0.0)
             
@@ -1629,16 +2033,31 @@ class CoTGraphAgent(WMNavAgent):
                 'base_score': base_score,
                 'spatial_objects': spatial_objects,
                 'current_graph': current_graph,
-                'overlap_score': overlap_score
+                'overlap_score': overlap_score,
+                'vlm_predictions': direction_vlm_data,  # 添加VLM预测数据
+                'goal_rotate': direction  # 添加方向信息
             }
             
             print(f"   空间对象: {len(spatial_objects)}")
             print(f"   图重叠: {overlap_score:.3f}")
         
+        # === Overlap-Based Reasoning Strategy Selection ===
+        # 计算各方向的平均重叠分数以确定探索阶段
+        overlap_scores = [data['overlap_score'] for data in direction_data.values()]
+        avg_overlap = sum(overlap_scores) / len(overlap_scores) if overlap_scores else 0.0
+        max_overlap = max(overlap_scores) if overlap_scores else 0.0
+        
+        # 根据重叠分数确定探索策略
+        exploration_phase = self._get_exploration_phase_description(avg_overlap, max_overlap)
+        
+        print(f"\n📊 重叠分析: 平均={avg_overlap:.3f}, 最大={max_overlap:.3f}")
+        print(f"🎯 探索阶段: {exploration_phase['phase_name']}")
+        print(f"💡 推理策略: {exploration_phase['reasoning_strategy']}")
+        
         # === 阶段5: LLM综合空间推理与方向推荐 ===
         current_goal = getattr(self, 'last_cached_goal', 'unknown_target')
         llm_result = self._perform_llm_spatial_reasoning(
-            direction_data, current_goal, vlm_predictions
+            direction_data, current_goal, vlm_predictions, exploration_phase
         )
         
         recommended_direction = llm_result.get('recommended_direction', 90)
@@ -1652,15 +2071,20 @@ class CoTGraphAgent(WMNavAgent):
         
         # 根据LLM推荐调整各方向得分
         enhanced_scores = {}
+        
+        # 获取exploration phase的权重调整
+        weight_adjustments = exploration_phase.get('weight_adjustments', {})
+        spatial_weight = weight_adjustments.get('spatial_weight', 0.6)
+        semantic_weight = weight_adjustments.get('semantic_weight', 0.2)
+        llm_weight = weight_adjustments.get('llm_weight', 0.3)
+        
+        print(f"🎯 应用 {exploration_phase['phase_name']} 权重策略:")
+        print(f"   空间权重: {spatial_weight}, 语义权重: {semantic_weight}, LLM权重: {llm_weight}")
+        
         for direction_str, data in direction_data.items():
             direction = int(direction_str)
             base_score = data['base_score']
             overlap_score = data['overlap_score']
-            
-            # 基础加权
-            spatial_weight = 0.6  # 空间因子权重
-            semantic_weight = 0.2  # 语义因子权重
-            llm_weight = 0.3      # LLM推理权重
             
             # LLM推荐方向的加成
             if direction == recommended_direction:
@@ -1668,18 +2092,28 @@ class CoTGraphAgent(WMNavAgent):
             else:
                 llm_boost = max(0.2, llm_confidence * 0.5)  # 其他方向获得部分加成
             
-            enhanced_score = (
-                base_score * spatial_weight +
-                overlap_score * 10 * semantic_weight +  # 转换到0-10范围
-                llm_boost * 10 * llm_weight     # LLM推理加成转换到0-10范围
-            )
+            if base_score >= 10:
+                enhanced_score = 10  #目标定向
+            else:
+                enhanced_score = (
+                    base_score * spatial_weight +
+                    overlap_score * 10 * semantic_weight +  # 转换到0-10范围
+                    llm_boost * 10 * llm_weight     # LLM推理加成转换到0-10范围
+                )
+                # 确保分数在合理范围内，并保持数值稳定性
+                enhanced_score = max(0.0, min(10.0, enhanced_score))
+                # 四舍五入到两位小数，减少浮点精度误差
+                enhanced_score = round(enhanced_score, 2)
             
             enhanced_scores[direction_str] = enhanced_score
             
-            print(f"   方向{direction}°: 基础{base_score:.2f} + 语义{overlap_score:.3f} + LLM{llm_boost:.3f} = {enhanced_score:.3f}")
+            print(f"   方向{direction}°: 基础{base_score:.2f}×{spatial_weight} + 语义{overlap_score:.3f}×{semantic_weight} + LLM{llm_boost:.3f}×{llm_weight} = {enhanced_score:.3f}")
         
         print(f"\n✅ 空间-语义-LLM整合完成，推荐方向: {recommended_direction}°")
         final_result = super().update_curiosity_value(enhanced_scores, reason)
+        
+        # 存储direction_data供make_plan使用
+        self._direction_scene_data = direction_data
         
         # 清理临时数据
         if hasattr(self, '_current_vlm_predictions'):
@@ -1702,9 +2136,7 @@ class CoTGraphAgent(WMNavAgent):
         # 只在有VLM预测数据时才添加语义信息
         if hasattr(self, '_current_vlm_predictions') and self._current_vlm_predictions:
             self._update_semantic_voxel_mapping(r, theta, agent_state, temp_map)
-        else:
-            # 在没有语义信息时，只记录空间位置供后续使用
-            self._record_spatial_position(r, theta, agent_state)
+        # 移除_record_spatial_position调用 - 由_map_objects_to_spatial_coordinates_with_voxel统一处理
         
     def _update_semantic_voxel_mapping(self, r: float, theta: float, agent_state, temp_map: np.ndarray):
         """
@@ -1773,118 +2205,21 @@ class CoTGraphAgent(WMNavAgent):
         except Exception as e:
             print(f"   ⚠️ 语义体素映射更新失败: {e}")
             
-    def _record_spatial_position(self, r: float, theta: float, agent_state):
-        """
-        记录纯空间位置信息，为后续语义映射做准备
-        在navigability阶段调用，此时还没有VLM分析结果
-        """
-        try:
-            agent_coords = self._global_to_grid(agent_state.position)
-            clipped = min(r, 3.0)
-            
-            local_coords = np.array([clipped * np.sin(theta), 0, -clipped * np.cos(theta)])
-            global_coords = local_to_global(agent_state.position, agent_state.rotation, local_coords)
-            point = self._global_to_grid(global_coords)
-            
-            # 获取方向键
-            direction_deg = int(np.degrees(theta))
-            direction_key = str(((direction_deg + 15) // 30) * 30)
-            
-            # 初始化待填充的空间位置记录
-            if not hasattr(self, '_pending_spatial_positions'):
-                self._pending_spatial_positions = {}
-                
-            voxel_key = f"{point[0]}_{point[1]}"
-            
-            # 记录空间信息，等待语义信息填充
-            self._pending_spatial_positions[voxel_key] = {
-                'position': point,
-                'global_coords': global_coords,
-                'direction_key': direction_key,
-                'r': r,
-                'theta': theta,
-                'timestamp': self.step_ndx if hasattr(self, 'step_ndx') else 0
-            }
-        except Exception as e:
-            print(f"   ⚠️ 空间位置记录失败: {e}")
-            
     def _backfill_semantic_to_spatial_positions(self, vlm_predictions: Dict):
         """
-        将VLM预测的语义信息回填到之前记录的空间位置
-        这解决了时机问题：先有空间信息（navigability阶段），后有语义信息（VLM分析后）
+        简化版语义信息回填函数
+        由于_map_objects_to_spatial_coordinates_with_voxel已经处理了空间-语义映射，
+        这个函数现在主要用于验证和清理
         """
-        if not hasattr(self, '_pending_spatial_positions') or not self._pending_spatial_positions:
-            print("   💭 没有待填充的空间位置记录")
-            return
-            
         if not isinstance(vlm_predictions, dict):
-            print("   ⚠️ VLM预测数据格式无效")
+            print(f"   ⚠️ VLM预测数据格式无效 (type: {type(vlm_predictions)})")
             return
             
-        backfilled_count = 0
+        print(f"   💭 VLM语义数据已可用，包含{len(vlm_predictions)}个方向的预测")
         
-        try:
-            # 遍历所有待填充的空间位置
-            for voxel_key, spatial_info in list(self._pending_spatial_positions.items()):
-                direction_key = spatial_info['direction_key']
-                
-                # 检查该方向是否有VLM预测数据
-                direction_data = vlm_predictions.get(direction_key, {})
-                if isinstance(direction_data, dict) and direction_data:
-                    objects = direction_data.get('Objects', direction_data.get('objects', []))
-                    room_type = direction_data.get('Room', direction_data.get('room_type', 'unknown'))
-                    confidence = direction_data.get('Score', direction_data.get('score', 0.5))
-                    
-                    # 将语义信息添加到语义体素映射
-                    if voxel_key not in self.semantic_voxel_map:
-                        self.semantic_voxel_map[voxel_key] = {
-                            'position': spatial_info['position'],
-                            'global_coords': spatial_info['global_coords'],
-                            'objects': [],
-                            'room_type': room_type,
-                            'confidence': confidence,
-                            'observations': 1,
-                            'last_updated': self.step_ndx if hasattr(self, 'step_ndx') else 0
-                        }
-                    else:
-                        # 更新现有条目
-                        existing = self.semantic_voxel_map[voxel_key]
-                        existing['observations'] += 1
-                        existing['confidence'] = (existing['confidence'] + confidence) / 2
-                        existing['last_updated'] = self.step_ndx if hasattr(self, 'step_ndx') else 0
-                        
-                        if confidence > existing.get('room_confidence', 0):
-                            existing['room_type'] = room_type
-                            existing['room_confidence'] = confidence
-                    
-                    # 添加物体信息并更新全局场景图
-                    if isinstance(objects, list):
-                        for obj in objects:
-                            obj_name = obj if isinstance(obj, str) else obj.get('name', str(obj))
-                            if obj_name not in self.semantic_voxel_map[voxel_key]['objects']:
-                                self.semantic_voxel_map[voxel_key]['objects'].append(obj_name)
-                                self._update_global_scene_graph(obj_name, spatial_info['position'], room_type, voxel_key)
-                    
-                    backfilled_count += 1
-                    
-                    # 从待填充列表中移除已处理的位置
-                    del self._pending_spatial_positions[voxel_key]
-                    
-            print(f"   ✅ 语义信息回填完成: {backfilled_count}个位置已更新")
-            
-            # 清理过期的待填充记录（超过5步的记录）
-            if hasattr(self, 'step_ndx'):
-                current_step = self.step_ndx
-                expired_keys = [key for key, info in self._pending_spatial_positions.items() 
-                              if current_step - info['timestamp'] > 5]
-                for key in expired_keys:
-                    del self._pending_spatial_positions[key]
-                    
-                if expired_keys:
-                    print(f"   🧹 清理过期记录: {len(expired_keys)}个")
-                    
-        except Exception as e:
-            print(f"   ⚠️ 语义信息回填失败: {e}")
+        # 清理过期的数据结构（如果存在）
+        if hasattr(self, '_pending_spatial_positions'):
+            delattr(self, '_pending_spatial_positions')
             
     def _update_global_scene_graph(self, obj_name: str, position: tuple, room_type: str, voxel_key: str):
         """
@@ -2298,7 +2633,19 @@ class CoTGraphAgent(WMNavAgent):
             # 基于场景图质量的动态权重调整
             scene_quality = self._assess_scene_graph_quality(corrected_scene_graph)
             
-            if scene_quality > 0.8:
+            # 检查是否检测到目标物体
+            target_detected = object_level_scores.get('target_detected', False)
+            target_objects_found = object_level_scores.get('target_objects_found', [])
+            
+            if target_detected:
+                # 🎯 目标检测加成：当发现目标物体时大幅提升对象权重
+                print(f"   🎯 检测到目标物体: {target_objects_found}")
+                room_weight = 0.25
+                object_weight = 0.50  # 显著提升对象权重
+                spatial_weight = 0.20
+                semantic_weight = 0.03
+                depth_weight = 0.02
+            elif scene_quality > 0.8:
                 # 高质量场景图：更信任空间关系
                 room_weight = 0.35
                 object_weight = 0.30
@@ -2776,6 +3123,7 @@ class CoTGraphAgent(WMNavAgent):
     def _calculate_object_level_overlap(self, vlm_objects: Dict, hierarchical_graph: Dict, goal_subgraph: Dict, room_scores: Dict) -> Dict:
         """
         计算对象级别的重叠匹配度，利用房间级别筛选优化
+        特别加强对目标物体的检测和评分
         """
         try:
             # 从VLM预测中提取物体
@@ -2783,15 +3131,45 @@ class CoTGraphAgent(WMNavAgent):
             if isinstance(vlm_objects, dict):
                 for direction_key, direction_data in vlm_objects.items():
                     if isinstance(direction_data, dict):
-                        objects = direction_data.get('Objects', direction_data.get('objects', []))
-                        if isinstance(objects, list):
+                        objects = direction_data.get('Objects', direction_data.get('objects', {}))
+                        
+                        # 处理字典格式的Objects（主要格式）
+                        if isinstance(objects, dict):
+                            for obj_name, position_info in objects.items():
+                                current_objects.add(obj_name.lower())
+                        
+                        # 处理列表格式的Objects（备用格式）
+                        elif isinstance(objects, list):
                             for obj in objects:
                                 obj_name = obj if isinstance(obj, str) else obj.get('name', str(obj))
                                 current_objects.add(obj_name.lower())
             
-            # 从目标子图中提取物体
+            # 从目标子图中提取目标物体名称
             target_objects = set()
+            current_goal = getattr(self, '_current_goal', '').lower() if hasattr(self, '_current_goal') else ''
+            
+            # 首先添加当前目标
+            if current_goal:
+                target_objects.add(current_goal)
+                print(f"   🎯 当前目标物体: {current_goal}")
+            
+            # 然后从goal_subgraph中提取
             if isinstance(goal_subgraph, dict):
+                # 从spatial_anchor_objects提取真实的物体名称
+                spatial_anchors = goal_subgraph.get('spatial_anchor_objects', {})
+                if isinstance(spatial_anchors, dict):
+                    for obj_key, obj_info in spatial_anchors.items():
+                        if isinstance(obj_info, dict):
+                            # 提取实际的物体名称，而不是占位符键名
+                            actual_name = obj_info.get('name', obj_key)
+                            target_objects.add(str(actual_name).lower())
+                        else:
+                            target_objects.add(str(obj_info).lower())
+                elif isinstance(spatial_anchors, list):
+                    for obj_name in spatial_anchors:
+                        target_objects.add(str(obj_name).lower())
+                
+                # 从nodes中提取（备用）
                 nodes = goal_subgraph.get('nodes', [])
                 if isinstance(nodes, list):
                     for node in nodes:
@@ -2799,6 +3177,8 @@ class CoTGraphAgent(WMNavAgent):
                             obj_name = node.get('name', node.get('id', ''))
                             if obj_name:
                                 target_objects.add(str(obj_name).lower())
+            
+            print(f"   📊 对象匹配分析: VLM检测={list(current_objects)}, 目标={list(target_objects)}")
             
             # 从分层场景图中提取物体（优先考虑匹配房间中的物体）
             scene_graph_objects = set()
@@ -2816,10 +3196,33 @@ class CoTGraphAgent(WMNavAgent):
                 if obj_room in matched_rooms or matched_rooms == set():
                     prioritized_objects.add(obj_name)
             
-            # 计算VLM-目标重叠
-            vlm_target_overlap = len(current_objects.intersection(target_objects))
+            # 计算VLM-目标重叠（关键！）
+            vlm_target_intersection = current_objects.intersection(target_objects)
+            vlm_target_overlap = len(vlm_target_intersection)
             vlm_target_total = len(current_objects.union(target_objects))
-            vlm_target_score = vlm_target_overlap / max(vlm_target_total, 1)
+            
+            # 当发现目标物体时，显著提升分数
+            if vlm_target_overlap > 0:
+                # 基础匹配分数
+                base_vlm_target_score = vlm_target_overlap / max(vlm_target_total, 1)
+                
+                # 目标检测加成：每个目标物体+0.5分，上限0.9
+                target_detection_bonus = min(0.6, vlm_target_overlap * 0.5)
+                
+                # 完全匹配奖励：如果所有目标都找到了
+                if len(vlm_target_intersection) == len(target_objects) and len(target_objects) > 0:
+                    perfect_match_bonus = 0.2
+                else:
+                    perfect_match_bonus = 0.0
+                
+                vlm_target_score = min(1.0, base_vlm_target_score + target_detection_bonus + perfect_match_bonus)
+                
+                print(f"   🎯 目标检测成功! 发现: {list(vlm_target_intersection)}")
+                print(f"      基础分数: {base_vlm_target_score:.3f}, 检测奖励: {target_detection_bonus:.3f}, 完美匹配奖励: {perfect_match_bonus:.3f}")
+                print(f"      最终VLM-目标分数: {vlm_target_score:.3f}")
+            else:
+                vlm_target_score = vlm_target_overlap / max(vlm_target_total, 1) if vlm_target_total > 0 else 0.0
+                print(f"   ❌ 未检测到目标物体，VLM-目标分数: {vlm_target_score:.3f}")
             
             # 计算场景图-目标重叠（优先权重加成）
             scene_target_overlap = len(scene_graph_objects.intersection(target_objects))
@@ -2835,8 +3238,13 @@ class CoTGraphAgent(WMNavAgent):
             vlm_scene_total = len(current_objects.union(scene_graph_objects))
             vlm_scene_consistency = vlm_scene_overlap / max(vlm_scene_total, 1)
             
-            # 综合对象匹配分数
-            object_match_score = (vlm_target_score + scene_target_score + vlm_scene_consistency * 0.3) / 2.3
+            # 综合对象匹配分数 - 重点突出VLM-目标匹配
+            if vlm_target_overlap > 0:
+                # 发现目标时，大幅提升权重
+                object_match_score = (vlm_target_score * 0.7 + scene_target_score * 0.2 + vlm_scene_consistency * 0.1)
+            else:
+                # 未发现目标时，使用平衡权重
+                object_match_score = (vlm_target_score * 0.4 + scene_target_score * 0.4 + vlm_scene_consistency * 0.2)
             
             # 应用房间匹配加成
             room_bonus = room_scores.get('room_match_score', 0) * 0.1
@@ -2849,7 +3257,9 @@ class CoTGraphAgent(WMNavAgent):
                 'vlm_scene_consistency': vlm_scene_consistency,
                 'matched_objects': list(current_objects.intersection(target_objects)),
                 'prioritized_matches': list(prioritized_objects.intersection(target_objects)),
-                'room_bonus_applied': room_bonus
+                'room_bonus_applied': room_bonus,
+                'target_detected': vlm_target_overlap > 0,
+                'target_objects_found': list(vlm_target_intersection) if vlm_target_overlap > 0 else []
             }
             
         except Exception as e:
@@ -2860,7 +3270,9 @@ class CoTGraphAgent(WMNavAgent):
                 'scene_target_match': 0.0,
                 'vlm_scene_consistency': 0.0,
                 'matched_objects': [],
-                'prioritized_matches': []
+                'prioritized_matches': [],
+                'target_detected': False,
+                'target_objects_found': []
             }
     
     def _calculate_hierarchical_spatial_match(self, hierarchical_graph: Dict, goal_subgraph: Dict) -> Dict:
@@ -3191,6 +3603,11 @@ class CoTGraphAgent(WMNavAgent):
         结合voxel_map、深度估计和空间关系来提高位置准确性
         """
         spatial_objects = []
+        
+        # 确保vlm_predictions是字典类型
+        if not isinstance(vlm_predictions, dict):
+            print(f"⚠️ Warning: vlm_predictions is not a dict in _map_objects_to_spatial_coordinates_with_voxel (type: {type(vlm_predictions)})")
+            return spatial_objects
         
         # 检查指定方向的预测数据
         direction_key = str(direction)
@@ -4124,7 +4541,7 @@ class CoTGraphAgent(WMNavAgent):
         return False
         
         
-    def _perform_llm_spatial_reasoning(self, all_direction_data, goal, vlm_predictions):
+    def _perform_llm_spatial_reasoning(self, all_direction_data, goal, vlm_predictions, exploration_phase=None):
         """
         LLM Comprehensive Spatial Reasoning: Analyze all directions to recommend the best navigation choice
         
@@ -4132,6 +4549,7 @@ class CoTGraphAgent(WMNavAgent):
             all_direction_data: Dictionary with direction keys and their spatial analysis data
             goal: Target object to find
             vlm_predictions: Complete VLM analysis results for all directions
+            exploration_phase: Dict with exploration phase info and reasoning strategy
         
         Returns:
             Dict: Contains recommended_direction, confidence_score, and reasoning
@@ -4139,7 +4557,7 @@ class CoTGraphAgent(WMNavAgent):
         try:
             # Build comprehensive spatial reasoning prompt
             reasoning_prompt = self._build_comprehensive_spatial_reasoning_prompt(
-                all_direction_data, goal, vlm_predictions
+                all_direction_data, goal, vlm_predictions, exploration_phase
             )
             
             # Use LLM for multi-directional reasoning
@@ -4159,7 +4577,7 @@ class CoTGraphAgent(WMNavAgent):
             print(f"   ❌ LLM reasoning error: {e}")
             return self._fallback_direction_selection(all_direction_data)
             
-    def _build_comprehensive_spatial_reasoning_prompt(self, all_direction_data, goal, vlm_predictions):
+    def _build_comprehensive_spatial_reasoning_prompt(self, all_direction_data, goal, vlm_predictions, exploration_phase=None):
         """Build comprehensive spatial reasoning prompt aligned with VLM style (English)"""
         current_goal = goal.upper()
         
@@ -4172,6 +4590,13 @@ class CoTGraphAgent(WMNavAgent):
         primary_room = target_room_hierarchy.get('primary_room', 'unknown')
         secondary_rooms = target_room_hierarchy.get('secondary_rooms', [])
         anchor_names = list(spatial_anchor_objects.keys()) if isinstance(spatial_anchor_objects, dict) else []
+        
+        # Add exploration phase information
+        exploration_context = ""
+        if exploration_phase:
+            phase_name = exploration_phase.get('phase_name', 'STANDARD')
+            reasoning_strategy = exploration_phase.get('reasoning_strategy', '')
+            exploration_context = f"\nEXPLORATION PHASE: {phase_name}\nSTRATEGY: {reasoning_strategy}\n"
         
         # Build connections string similar to VLM prompt
         connections_str = []
@@ -4200,11 +4625,16 @@ class CoTGraphAgent(WMNavAgent):
         direction_summaries = []
         expected_directions = ['30', '90', '150', '210', '270', '330']
         
+        # Ensure vlm_predictions is a dictionary
+        if not isinstance(vlm_predictions, dict):
+            print(f"⚠️ Warning: vlm_predictions is not a dict (type: {type(vlm_predictions)}), using empty dict")
+            vlm_predictions = {}
+        
         for direction in expected_directions:
             direction_str = str(direction)
             
-            # Get VLM analysis data
-            vlm_data = vlm_predictions.get(direction_str, {})
+            # Get VLM analysis data with safe access
+            vlm_data = vlm_predictions.get(direction_str, {}) if isinstance(vlm_predictions, dict) else {}
             score = vlm_data.get('Score', 0) if isinstance(vlm_data, dict) else 0
             objects = vlm_data.get('Objects', {}) if isinstance(vlm_data, dict) else {}
             room_type = vlm_data.get('Room', 'unknown') if isinstance(vlm_data, dict) else 'unknown'
@@ -4259,93 +4689,104 @@ class CoTGraphAgent(WMNavAgent):
             spatial_data = all_direction_data.get(direction_str, {})
             overlap_scores.append(spatial_data.get('overlap_score', 0.0))
         
-        max_overlap = max(overlap_scores) if overlap_scores else 0.0
-        avg_overlap = sum(overlap_scores) / len(overlap_scores) if overlap_scores else 0.0
-        high_overlap_count = sum(1 for s in overlap_scores if s > 0.6)
-        medium_overlap_count = sum(1 for s in overlap_scores if 0.3 <= s <= 0.6)
+        # Create exploration-phase-specific prompt in VLM style but for LLM reasoning
+        phase_name = exploration_phase.get('phase_name', 'STANDARD') if exploration_phase else 'STANDARD'
+        reasoning_strategy = exploration_phase.get('reasoning_strategy', '') if exploration_phase else ''
         
-        # Determine reasoning strategy based on overlap distribution
-        if max_overlap > 0.8:
-            strategy_type = "high_confidence"
-            reasoning_focus = "Focus on the highest overlap direction as it shows strong goal alignment."
-        elif max_overlap > 0.6:
-            strategy_type = "medium_confidence"
-            reasoning_focus = "Compare top 2-3 directions with good overlap scores, considering VLM quality."
-        elif max_overlap > 0.3:
-            strategy_type = "mixed_signals"
-            reasoning_focus = "Analyze moderate overlap directions, prioritize VLM room predictions and spatial anchors."
-        else:
-            strategy_type = "exploration_needed"
-            reasoning_focus = "Low overlap across all directions - rely more on VLM analysis and basic spatial logic."
+        # Build context header based on exploration phase
+        if phase_name == 'TARGET_VERIFICATION':
+            context_header = (
+                f"NAVIGATION TASK: Find {current_goal} - HIGH CONFIDENCE (target likely nearby)\n"
+                f"PRIMARY FOCUS: Semantic similarity analysis and target confirmation\n"
+                f"Context: {primary_room} room, anchors: {', '.join(anchor_names[:3]) if anchor_names else 'none'}"
+            )
+        elif phase_name == 'FOCUSED_SEARCH':
+            context_header = (
+                f"NAVIGATION TASK: Find {current_goal} - FOCUSED SEARCH (moderate alignment found)\n"
+                f"PRIMARY FOCUS: Balance semantic relevance with spatial navigation\n"
+                f"Context: Target in {primary_room}, also check {', '.join(secondary_rooms[:2]) if secondary_rooms else 'adjacent areas'}, anchors: {', '.join(anchor_names[:3]) if anchor_names else 'none'}"
+            )
+        else:  # FRONTIER_EXPLORATION
+            context_header = (
+                f"NAVIGATION TASK: Find {current_goal} - EXPLORATION MODE (low similarity, search new areas)\n"
+                f"PRIMARY FOCUS: Spatial navigation and room discovery\n"
+                f"Context: Seek {primary_room} room, expected in {', '.join(secondary_rooms[:2]) if secondary_rooms else 'connected areas'}, watch for {', '.join(anchor_names[:3]) if anchor_names else 'related objects'}"
+            )
         
-        # Create prompt in VLM style but for LLM reasoning
+        # Build streamlined directional analysis
+        direction_summaries = []
+        expected_directions = ['30', '90', '150', '210', '270', '330']
+        
+        for direction in expected_directions:
+            direction_str = str(direction)
+            
+            # Get core data with safe access
+            vlm_data = vlm_predictions.get(direction_str, {}) if isinstance(vlm_predictions, dict) else {}
+            spatial_data = all_direction_data.get(direction_str, {})
+            
+            score = vlm_data.get('Score', 0) if isinstance(vlm_data, dict) else 0
+            room_type = vlm_data.get('Room', 'unknown') if isinstance(vlm_data, dict) else 'unknown'
+            path_quality = vlm_data.get('Path', 'unknown') if isinstance(vlm_data, dict) else 'unknown'
+            objects = vlm_data.get('Objects', {}) if isinstance(vlm_data, dict) else {}
+            anchors = vlm_data.get('DirectionalAnchors', vlm_data.get('Anchors', [])) if isinstance(vlm_data, dict) else []
+            
+            base_score = spatial_data.get('base_score', 0.0)
+            overlap_score = spatial_data.get('overlap_score', 0.0)
+            
+            # Create concise object summary
+            key_objects = list(objects.keys())[:3] if objects else []
+            anchor_summary = ', '.join(anchors[:2]) if anchors else 'none'
+            
+            # Phase-specific summary format
+            if phase_name == 'TARGET_VERIFICATION':
+                direction_summaries.append(
+                    f"{direction}°: Overlap={overlap_score:.3f}, VLM={score}/10 ({room_type}), Objects: {', '.join(key_objects) if key_objects else 'none'}, Anchors: {anchor_summary}"
+                )
+            elif phase_name == 'FOCUSED_SEARCH':
+                direction_summaries.append(
+                    f"{direction}°: Spatial={base_score:.2f}, Semantic={overlap_score:.3f}, VLM={score}/10 ({room_type}, {path_quality}), Key: {', '.join(key_objects[:2]) if key_objects else 'none'}"
+                )
+            else:  # FRONTIER_EXPLORATION
+                direction_summaries.append(
+                    f"{direction}°: VLM={score}/10 ({room_type}, {path_quality}), Spatial={base_score:.2f}, Objects: {', '.join(key_objects[:2]) if key_objects else 'none'}, Guides: {anchor_summary}"
+                )
+        
+        # Build phase-specific reasoning instructions
+        if phase_name == 'TARGET_VERIFICATION':
+            reasoning_instructions = (
+                f"STRATEGY: Focus on highest overlap direction (>0.7). Verify target presence.\n"
+                f"1. Prioritize directions with overlap > 0.7 (strong semantic match)\n"
+                f"2. Confirm VLM room matches expected ({primary_room})\n"
+                f"3. Check for expected anchors: {', '.join(anchor_names[:3]) if anchor_names else 'related objects'}\n"
+                f"4. Ensure path accessibility (avoid 'blocked', prefer 'clear')"
+            )
+        elif phase_name == 'FOCUSED_SEARCH':
+            reasoning_instructions = (
+                f"STRATEGY: Balance semantic relevance (0.4-0.7) with spatial navigation.\n"
+                f"1. Compare top 2-3 overlap directions (0.4-0.7 range)\n"
+                f"2. Favor VLM rooms matching {primary_room} or {', '.join(secondary_rooms[:2]) if secondary_rooms else 'connected areas'}\n"
+                f"3. Consider spatial scores for navigation quality\n"
+                f"4. Look for directional anchors pointing toward target areas"
+            )
+        else:  # FRONTIER_EXPLORATION  
+            reasoning_instructions = (
+                f"STRATEGY: Prioritize VLM analysis and spatial exploration (<0.3 overlap).\n"
+                f"1. Rely on VLM room predictions (seek {primary_room})\n"
+                f"2. Favor higher VLM scores (>6/10) with clear paths\n"
+                f"3. Look for any anchor objects or related items\n"
+                f"4. Apply spatial logic for room connectivity and exploration"
+            )
+        
+        # Create streamlined prompt
         prompt = (
-            f"You are an expert navigation agent tasked with finding a {current_goal}. "
-            f"The VLM has analyzed the panoramic view and provided detailed analysis for each direction (30, 90, 150, 210, 270, 330 degrees). "
-            f"Context for {current_goal}: Primary room is {primary_room}, "
-            f"secondary rooms are {', '.join(secondary_rooms) if secondary_rooms else 'none'}, "
-            f"adjacent zones include various connected areas. "
-            f"Navigation paths: {', '.join(connections_str) if connections_str else 'not specified'}. "
-            f"Key landmarks: {', '.join(wayfinding) if wayfinding else 'none'}. "
-            f"Spatial anchors to detect: {', '.join(anchor_names) if anchor_names else 'none'}. "
-            f"Search priorities: {', '.join(frontiers) if frontiers else 'explore systematically'}. "
-            f"\n\n"
-            f"OVERLAP ANALYSIS SUMMARY: Max overlap: {max_overlap:.3f}, Average: {avg_overlap:.3f}, "
-            f"High overlap (>0.6): {high_overlap_count} directions, Medium overlap (0.3-0.6): {medium_overlap_count} directions. "
-            f"Strategy: {strategy_type.upper()} - {reasoning_focus}\n\n"
-            f"Based on the comprehensive analysis below (VLM + Spatial Analysis), determine the BEST direction to navigate towards the {current_goal}. "
-            f"Consider VLM predictions, spatial mapping accuracy, scene graph complexity, and object overlap scores.\n\n"
-            f"Comprehensive Directional Analysis (VLM + Spatial Data):\n"
-            f"{chr(10).join(direction_summaries)}"
-            f"\n\n"
-            f"ADAPTIVE REASONING FRAMEWORK - Use the strategy appropriate for current overlap distribution:\n\n"
-            f"=== HIGH CONFIDENCE STRATEGY (Max Overlap > 0.8) ===\n"
-            f"When one direction has very high overlap (>0.8):\n"
-            f"• Prioritize the highest overlap direction strongly (weight: 70%)\n"
-            f"• Verify VLM room prediction matches expected room type\n"
-            f"• Confirm VLM score is reasonable (>6/10) and path is accessible\n"
-            f"• Check for expected spatial anchors in that direction\n"
-            f"• Secondary consideration: VLM explanation quality and object confidence\n\n"
-            f"=== MEDIUM CONFIDENCE STRATEGY (Max Overlap 0.6-0.8) ===\n"
-            f"When multiple directions have good overlap (0.6-0.8):\n"
-            f"• Compare top 2-3 overlap directions (weight: 50%)\n"
-            f"• Heavily weigh VLM room predictions matching primary/secondary rooms (weight: 30%)\n"
-            f"• Consider VLM scores and path accessibility (weight: 20%)\n"
-            f"• Break ties using spatial anchor presence and object relationships\n"
-            f"• Favor directions with higher scene graph complexity (more objects/edges)\n\n"
-            f"=== MIXED SIGNALS STRATEGY (Max Overlap 0.3-0.6) ===\n"
-            f"When overlap scores are moderate across directions:\n"
-            f"• Balance overlap scores with VLM analysis (weight: 40% overlap, 60% VLM)\n"
-            f"• Prioritize VLM room predictions that match primary room strongly\n"
-            f"• Look for directions with expected spatial anchors even if overlap is medium\n"
-            f"• Consider VLM explanation quality and object semantic relevance\n"
-            f"• Apply common-sense spatial logic for room connectivity\n\n"
-            f"=== EXPLORATION STRATEGY (Max Overlap < 0.3) ===\n"
-            f"When all overlap scores are low (exploration phase):\n"
-            f"• Rely primarily on VLM analysis (weight: 70% VLM, 30% overlap)\n"
-            f"• Strongly favor directions showing primary room ({primary_room})\n"
-            f"• Look for any presence of expected spatial anchors or related objects\n"
-            f"• Consider path accessibility and VLM confidence scores\n"
-            f"• Apply basic spatial reasoning about room layouts and connectivity\n"
-            f"• When uncertain, prefer directions with clearer paths and higher VLM scores\n\n"
-            f"CURRENT SITUATION: Your analysis should follow the {strategy_type.upper()} strategy.\n"
-            f"{reasoning_focus}\n\n"
-            f"Provide your analysis in this format:\n"
-            f"STRATEGY_APPLIED: [{strategy_type.upper()}] - Brief explanation of why this strategy fits the overlap distribution\n\n"
-            f"Direction 30°: [Overlap: {all_direction_data.get('30', {}).get('overlap_score', 0.0):.3f}] Brief analysis applying current strategy\n"
-            f"Direction 90°: [Overlap: {all_direction_data.get('90', {}).get('overlap_score', 0.0):.3f}] Brief analysis applying current strategy\n"
-            f"Direction 150°: [Overlap: {all_direction_data.get('150', {}).get('overlap_score', 0.0):.3f}] Brief analysis applying current strategy\n"
-            f"Direction 210°: [Overlap: {all_direction_data.get('210', {}).get('overlap_score', 0.0):.3f}] Brief analysis applying current strategy\n"
-            f"Direction 270°: [Overlap: {all_direction_data.get('270', {}).get('overlap_score', 0.0):.3f}] Brief analysis applying current strategy\n"
-            f"Direction 330°: [Overlap: {all_direction_data.get('330', {}).get('overlap_score', 0.0):.3f}] Brief analysis applying current strategy\n\n"
-            f"OVERLAP_BASED_REASONING:\n"
-            f"• Primary consideration (based on {strategy_type}): [What should be prioritized given the overlap distribution]\n"
-            f"• Secondary factors: [What additional factors help decide between similar options]\n"
-            f"• Strategy weights applied: [How overlap vs VLM vs spatial factors were balanced]\n\n"
-            f"COMPREHENSIVE_ANALYSIS: [Detailed reasoning showing how the {strategy_type} strategy led to your conclusion]\n\n"
+            f"{context_header}\n\n"
+            f"DIRECTIONAL ANALYSIS:\n"
+            f"{chr(10).join(direction_summaries)}\n\n"
+            f"{reasoning_instructions}\n\n"
+            f"Analyze each direction and provide:\n"
             f"RECOMMENDED_DIRECTION: [30, 90, 150, 210, 270, or 330]\n"
             f"CONFIDENCE_SCORE: [0.0 to 1.0]\n"
-            f"REASONING_SUMMARY: [Concise explanation of why this direction is best for finding {current_goal}]"
+            f"REASONING_SUMMARY: [Concise explanation based on {phase_name} strategy]"
         )
         
         return prompt
@@ -4523,166 +4964,142 @@ class CoTGraphAgent(WMNavAgent):
     
     def _extract_llm_direction_recommendation(self, llm_response):
         """
-        Enhanced extraction of direction recommendation from LLM response
-        Supports multiple response formats including JSON/dictionary formats and has robust fallback mechanisms
+        Streamlined extraction for simplified prompt format with robust error handling
         """
         result = {
-            'recommended_direction': None,
-            'confidence_score': 0.5,  # Default confidence
-            'reasoning_summary': 'No reasoning extracted',
+            'recommended_direction': 90,  # Default to forward
+            'confidence_score': 0.5,
+            'reasoning_summary': 'Default reasoning',
             'direction_evaluations': {}
         }
         
         try:
-            print(f"   🔍 Processing LLM response (length: {len(llm_response)} chars)")
-            
-            # First attempt: Try JSON/dictionary parsing
-            json_result = self._try_parse_json_response(llm_response)
-            if json_result:
-                print("   ✅ Successfully parsed JSON/dictionary format")
-                return json_result
-            
-            # Second attempt: Standard regex patterns for structured text
-            # Extract recommended direction - enhanced patterns
+            # Extract recommended direction - simplified patterns
             direction_patterns = [
-                r'RECOMMENDED_DIRECTION:\s*(\d+)°?',
-                r'recommended[_\s]direction[:\s]*(\d+)°?',
-                r'best[_\s]direction[:\s]*(\d+)°?',
-                r'choose[_\s]direction[:\s]*(\d+)°?',
-                r'direction[:\s]*(\d+)°?\s*(?:is|would|should)',
-                r'go[_\s]to[_\s]direction[:\s]*(\d+)°?',
-                r'move[_\s]to[_\s]direction[:\s]*(\d+)°?'
+                r'RECOMMENDED_DIRECTION:\s*(\d+)',
+                r'recommended[_\s]direction[:\s]*(\d+)',
+                r'direction[:\s]*(\d+)',
+                r'choose[_\s](\d+)°?',
+                r'go[_\s](\d+)°?'
             ]
             
             for pattern in direction_patterns:
                 match = re.search(pattern, llm_response, re.IGNORECASE)
                 if match:
-                    direction = int(match.group(1))
-                    if direction in [30, 90, 150, 210, 270, 330]:
-                        result['recommended_direction'] = direction
-                        print(f"   ✅ Found direction via regex: {direction}°")
-                        break
+                    try:
+                        direction = int(match.group(1))
+                        if direction in [30, 90, 150, 210, 270, 330]:
+                            result['recommended_direction'] = direction
+                            break
+                    except ValueError:
+                        continue
             
-            # Extract confidence score - expanded patterns  
+            # Extract confidence score with robust error handling
             confidence_patterns = [
-                r'CONFIDENCE_SCORE:\s*([\d.]+)',
-                r'confidence[:\s]*([\d.]+)',
-                r'certainty[:\s]*([\d.]+)',
-                r'score[:\s]*([\d.]+)',
-                r'probability[:\s]*([\d.]+)'
+                r'CONFIDENCE_SCORE:\s*([\d.%]+)',
+                r'confidence[:\s]*([\d.%]+)',
+                r'score[:\s]*([\d.%]+)'
             ]
             
             for pattern in confidence_patterns:
-                matches = re.finditer(pattern, llm_response, re.IGNORECASE)
-                for match in matches:
+                match = re.search(pattern, llm_response, re.IGNORECASE)
+                if match:
                     try:
-                        confidence = float(match.group(1))
-                        # Normalize confidence to 0-1 range if needed
-                        if confidence > 1.0:
-                            confidence = confidence / 10.0
-                        result['confidence_score'] = min(max(confidence, 0.0), 1.0)
-                        print(f"   ✅ Found confidence via regex: {result['confidence_score']:.3f}")
-                        break
-                    except ValueError:
+                        confidence_str = match.group(1).strip()
+                        # Handle cases like "0.8" or "80%" or malformed strings
+                        confidence_str = confidence_str.replace('%', '')
+                        
+                        # Remove any non-numeric characters except dots and spaces
+                        confidence_str = re.sub(r'[^\d.]', '', confidence_str)
+                        
+                        # Handle empty string or just dots or trailing dots
+                        if not confidence_str or confidence_str == '.' or confidence_str == '..' or confidence_str.endswith('.') and len(confidence_str.replace('.', '')) == 0:
+                            continue
+                            
+                        # Handle trailing dots like "0."
+                        if confidence_str.endswith('.') and len(confidence_str) > 1:
+                            confidence_str = confidence_str[:-1]
+                            
+                        # Ensure only one decimal point
+                        if '.' in confidence_str:
+                            parts = confidence_str.split('.')
+                            if len(parts) >= 2:
+                                # Take first integer part and first decimal part
+                                if parts[0] and parts[1]:
+                                    confidence_str = f"{parts[0]}.{parts[1]}"
+                                elif parts[0]:  # Only integer part
+                                    confidence_str = parts[0]
+                                else:
+                                    continue  # Invalid format
+                        
+                        if confidence_str and confidence_str != '.':
+                            confidence = float(confidence_str)
+                            # Normalize if it's in percentage form (>1.0) but handle edge case like 1.5 properly
+                            if confidence > 1.0 and confidence <= 100.0:
+                                confidence = confidence / 100.0
+                            elif confidence > 100.0:
+                                confidence = 1.0  # Cap at maximum
+                            result['confidence_score'] = max(0.0, min(1.0, confidence))
+                            break
+                    except (ValueError, IndexError) as e:
+                        print(f"   ⚠️ Failed to parse confidence '{match.group(1)}': {e}")
                         continue
-                if result['confidence_score'] != 0.5:  # If we found a confidence score
-                    break
             
-            # Extract reasoning summary - expanded patterns
+            # Extract reasoning summary
             reasoning_patterns = [
-                r'REASONING_SUMMARY:\s*(.+?)(?:\n\n|$)',
-                r'reasoning[:\s]*(.+?)(?:\n\n|$)',
-                r'explanation[:\s]*(.+?)(?:\n\n|$)',
-                r'because[:\s]*(.+?)(?:\n\n|$)',
-                r'this.*?because[:\s]*(.+?)(?:\n\n|$)'
+                r'REASONING_SUMMARY:\s*(.+?)(?:\n|$)',
+                r'reasoning[:\s]*(.+?)(?:\n|$)',
+                r'summary[:\s]*(.+?)(?:\n|$)',
+                r'explanation[:\s]*(.+?)(?:\n|$)'
             ]
             
             for pattern in reasoning_patterns:
                 match = re.search(pattern, llm_response, re.IGNORECASE | re.DOTALL)
                 if match:
                     reasoning = match.group(1).strip()
-                    # Clean up the reasoning text
-                    reasoning = re.sub(r'\n+', ' ', reasoning)  # Replace newlines with spaces
-                    reasoning = re.sub(r'\s+', ' ', reasoning)   # Normalize whitespace
-                    if len(reasoning) > 10:  # Only accept substantial reasoning
-                        result['reasoning_summary'] = reasoning
+                    if len(reasoning) > 10:  # Only use if substantial content
+                        result['reasoning_summary'] = reasoning[:200]  # Limit length
                         break
             
-            # Extract individual direction evaluations
-            direction_eval_pattern = r'Direction (\d+)°?\s*[:\-]\s*(.+?)(?=Direction \d+°?|COMPREHENSIVE_ANALYSIS|$)'
-            direction_matches = re.findall(direction_eval_pattern, llm_response, re.IGNORECASE | re.DOTALL)
-            
-            for direction_str, evaluation in direction_matches:
-                direction = int(direction_str)
-                if direction in [30, 90, 150, 210, 270, 330]:
-                    clean_eval = re.sub(r'\s+', ' ', evaluation.strip())
-                    result['direction_evaluations'][direction] = clean_eval
-            
-            # Smart fallback: if no explicit direction found, analyze the content contextually
-            if result['recommended_direction'] is None:
-                # Look for direction mentions with positive/negative indicators
-                direction_sentiment = {}
-                
-                for direction in [30, 90, 150, 210, 270, 330]:
-                    score = 0
-                    direction_mentions = [f"direction {direction}", f"{direction}°", f"{direction} degrees"]
-                    
-                    for mention in direction_mentions:
-                        if mention in llm_response.lower():
-                            # Look for positive indicators near this mention
-                            mention_pos = llm_response.lower().find(mention)
-                            context = llm_response.lower()[max(0, mention_pos-50):mention_pos+50]
-                            
-                            positive_words = ['best', 'optimal', 'recommend', 'choose', 'good', 'promising', 'suitable']
-                            negative_words = ['not', 'avoid', 'poor', 'bad', 'wrong', 'unsuitable']
-                            
-                            score += sum(1 for word in positive_words if word in context)
-                            score -= sum(1 for word in negative_words if word in context)
-                    
-                    direction_sentiment[direction] = score
-                
-                # Choose direction with highest sentiment score
-                if direction_sentiment and max(direction_sentiment.values()) > 0:
-                    result['recommended_direction'] = max(direction_sentiment.items(), key=lambda x: x[1])[0]
-                    result['confidence_score'] = min(0.7, 0.4 + max(direction_sentiment.values()) * 0.1)
-            
-            # Final fallback: if still no direction, set a default
-            if result['recommended_direction'] is None:
-                result['recommended_direction'] = 90  # Default forward direction
-                result['confidence_score'] = 0.3
-                result['reasoning_summary'] = 'LLM failed to provide clear direction recommendation, using default forward direction'
-            
+            print(f"   🎯 Extracted: Direction={result['recommended_direction']}°, Confidence={result['confidence_score']:.3f}")
             return result
             
         except Exception as e:
-            print(f"   ❌ Error parsing LLM direction recommendation: {e}")
-            return {
-                'recommended_direction': 90,
-                'confidence_score': 0.2,
-                'reasoning_summary': f'Parsing error: {str(e)}',
-                'direction_evaluations': {}
-            }
-    
-    def _fallback_direction_selection(self, all_direction_data):
-        """Fallback method to select best direction when LLM is unavailable"""
-        try:
-            # Find direction with highest overlap score
-            best_direction = 90  # Default
-            highest_score = 0.0
+            print(f"   ❌ LLM extraction error: {e}, using defaults")
+            return result
             
-            for direction_str, data in all_direction_data.items():
-                direction = int(direction_str)
-                if direction in [30, 90, 150, 210, 270, 330]:
-                    score = data.get('overlap_score', 0.0)
-                    if score > highest_score:
-                        highest_score = score
-                        best_direction = direction
+    def _fallback_direction_selection(self, all_direction_data):
+        """
+        Fallback when LLM recommendation fails
+        """
+        try:
+            if not all_direction_data:
+                return {
+                    'recommended_direction': 90,
+                    'confidence_score': 0.1,
+                    'reasoning_summary': 'No direction data available',
+                    'direction_evaluations': {}
+                }
+            
+            # Select direction with highest combined score
+            best_direction = 90
+            best_score = 0.0
+            
+            for direction, data in all_direction_data.items():
+                combined_score = (
+                    data.get('novelty_score', 0.0) * 0.3 +
+                    data.get('exploration_score', 0.0) * 0.3 +
+                    data.get('goal_alignment_score', 0.0) * 0.4
+                )
+                if combined_score > best_score:
+                    best_score = combined_score
+                    best_direction = direction
             
             return {
                 'recommended_direction': best_direction,
-                'confidence_score': min(highest_score, 1.0),
-                'reasoning_summary': f'Selected direction {best_direction}° based on highest overlap score ({highest_score:.3f})',
-                'direction_evaluations': {}
+                'confidence_score': min(best_score, 0.8),  # Cap fallback confidence
+                'reasoning_summary': f'Fallback selection: highest combined score ({best_score:.3f})',
+                'direction_evaluations': all_direction_data
             }
             
         except Exception as e:

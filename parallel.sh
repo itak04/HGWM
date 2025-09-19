@@ -5,8 +5,8 @@ ROOT_DIR=/home/ps/dqf/GoalNav/WMNavigation
 CONDA_PATH=/home/ps/anaconda3/etc/profile.d/conda.sh
 NUM_GPU=1
 INSTANCES=10
-NUM_EPISODES_PER_INSTANCE=100
-MAX_STEPS_PER_EPISODE=30
+NUM_EPISODES_PER_INSTANCE=200
+MAX_STEPS_PER_EPISODE=40
 TASK="ObjectNav"
 DATASET="hm3d_v0.1"
 # In parallel.sh, update these variables

@@ -462,11 +462,11 @@ class WMNavEnv(Env):
         
         print(f"🔄 CoT Analysis - Optimal Direction: {goal_rotate * 30}°")
         
-        # CoT-based planning
+        # CoT-based planning with enhanced scene graph data
         pano_images = episode_images[-12:]
         try:
             # For CoTGraphAgent, use the optimal direction image for planning
-            if isinstance(pano_images, list) and len(pano_images) > goal_rotate:
+            if isinstance(pano_images, list) and len(pano_images) > goal_rotate and goal_rotate >= 0:
                 target_image = [pano_images[goal_rotate]]
             else:
                 target_image = pano_images
@@ -474,12 +474,22 @@ class WMNavEnv(Env):
             logging.warning(f"Error selecting target image: {e}")
             target_image = pano_images
         
-        # Enhanced planning with CoT reasoning
+        # Extract direction-specific scene data from the agent
+        direction_scene_data = None
+        if hasattr(self.agent, '_direction_scene_data') and self.agent._direction_scene_data:
+            direction_str = str(goal_rotate * 30)
+            if direction_str in self.agent._direction_scene_data:
+                direction_scene_data = self.agent._direction_scene_data[direction_str].copy()
+                direction_scene_data['goal_rotate'] = goal_rotate  # Ensure goal_rotate is set
+                print(f"📊 Using scene graph data for direction {goal_rotate * 30}°")
+        
+        # Enhanced planning with CoT reasoning and scene graph data
         goal_flag, subtask = self.agent.make_plan(
             target_image, 
             self.previous_subtask, 
             goal_reason, 
-            self.current_episode['object']
+            self.current_episode['object'],
+            direction_scene_data  # Pass the scene graph data for the target direction
         )
         
         self.previous_subtask = subtask
