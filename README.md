@@ -2,7 +2,7 @@
 
 NeurIPS 2026 Submission
 
-[arXiv](https://arxiv.org/) &nbsp;|&nbsp; [Project Page](https://github.com/itak04/HGWM) &nbsp;|&nbsp; [Paper PDF](./neurips_2026.tex)
+[arXiv](https://arxiv.org/) &nbsp;|&nbsp; [Project Page](https://github.com/itak04/HGWM)
 
 Anonymous Author(s)
 
@@ -235,7 +235,7 @@ The most relevant source files map directly onto the components in the paper:
 
 ## 📈 Results
 
-Main results on HM3D v0.1 and MP3D (zero-shot, unsupervised; see `neurips_2026.tex`):
+Main results on HM3D v0.1 and MP3D (zero-shot, unsupervised):
 
 | Method | Vision | Language | HM3D v0.1 SR↑ | HM3D v0.1 SPL↑ | MP3D SR↑ | MP3D SPL↑ |
 |--------|--------|----------|---------------|----------------|----------|-----------|
