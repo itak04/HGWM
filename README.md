@@ -163,7 +163,7 @@ python scripts/main.py --config HGWM
 
 The agent will save the panoramic observations, the goal subgraph $G_{goal}$, the per-step scene graph $G_{scene}^{(t)}$, and the resulting trajectory under `logs/`.
 
-![demo](imgs/demo.gif)
+![demo](animation.gif)
 
 ## 📊 Evaluation
 
