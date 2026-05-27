@@ -8,7 +8,7 @@ Anonymous Author(s)
 
 > This repository is the official implementation of **HGWM**, a zero-shot Object Goal Navigation framework that reframes navigation as **online graph matching** between an LLM-derived predictive prior and a persistent spatial-semantic graph memory.
 
-![Overview of the HGWM navigation framework](architecture.png)
+![Overview of the HGWM navigation framework](imgs/architecture.png)
 
 HGWM is built on top of [WMNav](https://github.com/B0B8K1ng/WMNavigation) and [VLMnav](https://github.com/Jirl-upenn/VLMnav). Our method consists of four components:
 
@@ -163,7 +163,7 @@ python scripts/main.py --config HGWM
 
 The agent will save the panoramic observations, the goal subgraph $G_{goal}$, the per-step scene graph $G_{scene}^{(t)}$, and the resulting trajectory under `logs/`.
 
-![demo](animation.gif)
+![demo](imgs/animation.gif)
 
 ## 📊 Evaluation
 
