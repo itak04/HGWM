@@ -1,157 +1,278 @@
-# WMNavigation - Vision-Language Model Navigation System
+# HGWM: Hierarchical Graph-guided World Model for Zero-shot Object Navigation via Graph Matching
 
-该项目实现了基于视觉语言模型的室内物体导航系统，使用 Qwen2.5-VL-7B-Instruct 模型通过 SiliconFlow API 进行物体导航任务。
+NeurIPS 2026 Submission
 
-## 核心功能
+[arXiv](https://arxiv.org/) &nbsp;|&nbsp; [Project Page](https://github.com/itak04/HGWM) &nbsp;|&nbsp; [Paper PDF](./neurips_2026.tex)
 
-- **物体导航 (ObjectNav)**: 在 HM3D 环境中导航到指定目标物体
-- **VLM 集成**: 使用 SiliconFlow API 调用 Qwen2.5-VL-7B-Instruct 模型
-- **并行评估**: 支持多实例并行运行以提高评估效率
-- **完整指标**: 计算 Success Rate (SR) 和 SPL (Success Rate Weighted by Inverse Path Length)
+Anonymous Author(s)
 
-## 快速开始
-CUDA_VISIBLE_DEVICES=0 python scripts/main.py --config CoTGNav -ms 20 -ne 5 --name CotGNav_FixPredict --instances 1 --parallel -lf 1 --port 20001 --dataset hm3d_v0.1 --instance 0 --episodes "994,964"
-### 1. 环境准备
+> This repository is the official implementation of **HGWM**, a zero-shot Object Goal Navigation framework that reframes navigation as **online graph matching** between an LLM-derived predictive prior and a persistent spatial-semantic graph memory.
+
+![Overview of the HGWM navigation framework](architecture.png)
+
+HGWM is built on top of [WMNav](https://github.com/B0B8K1ng/WMNavigation) and [VLMnav](https://github.com/Jirl-upenn/VLMnav). Our method consists of four components:
+
+- **Predictive prior** — an LLM hallucinates a hierarchical *Goal Subgraph* (rooms, anchor objects, connectivity priors) before any observation is taken.
+- **Spatial-semantic graph memory** — observations are projected to world coordinates and stored as a persistent open-vocabulary 3D scene graph that survives field-of-view loss.
+- **Coarse-to-fine graph matching** — a coarse VLM stage ranks frontier directions by goal-conditioned visual cues; a fine LLM stage performs structural pruning and weighted graph embedding against the goal prior.
+- **Cognitive fusion policy** — an arbitrator switches between *Frontier Exploration → Focused Search → Target Verification* phases, blending the coarse and fine signals based on the overlap between $G_{goal}$ and $G_{scene}^{(t)}$.
+
+## 🔥 News
+
+- **May. 27th, 2026**: HGWM code release on GitHub.
+- **May. 15th, 2026**: HGWM paper submitted to NeurIPS 2026.
+
+## 📚 Table of Contents
+
+- [Get Started](#-get-started)
+  - [Installation and Setup](#-installation-and-setup)
+  - [Prepare Dataset](#-prepare-dataset)
+  - [API Keys](#-api-keys)
+- [Demo](#-demo)
+- [Evaluation](#-evaluation)
+- [Customize Experiments](#-customize-experiments)
+- [Results](#-results)
+- [Acknowledgement](#-acknowledgement)
+- [Citation](#-citation)
+
+## 🚀 Get Started
+
+### ⚙ Installation and Setup
+
+Clone this repo.
+
 ```bash
-# 激活conda环境
-conda activate wmnav
-
-# 设置API密钥
-export SILICONFLOW_API_KEY="your_api_key_here"
+git clone https://github.com/itak04/HGWM.git
+cd HGWM
 ```
 
-### 2. 测试VLM连接
+Create the conda environment and install all dependencies.
+
 ```bash
-python3 test_vlm_image.py
+conda create -n hgwm python=3.9 cmake=3.14.0
+conda activate hgwm
+conda install habitat-sim=0.3.1 withbullet headless -c conda-forge -c aihabitat
+
+pip install -r requirements.txt
 ```
 
-### 3. 运行完整评估
+### 🛢 Prepare Dataset
+
+This project is based on the [Habitat simulator](https://github.com/facebookresearch/habitat-sim) and uses the [HM3D](https://aihabitat.org/datasets/hm3d/) and [MP3D](https://niessner.github.io/Matterport/) datasets. Our code requires all of the above data to live in a single `data` folder with the following layout. Place the downloaded HM3D v0.1, HM3D v0.2, and MP3D folders into the configuration below:
+
+```
+├── <DATASET_ROOT>
+│  ├── hm3d_v0.1/
+│  │  ├── val/
+│  │  │  ├── 00800-TEEsavR23oF/
+│  │  │  │  ├── TEEsavR23oF.navmesh
+│  │  │  │  ├── TEEsavR23oF.glb
+│  │  ├── hm3d_annotated_basis.scene_dataset_config.json
+│  ├── objectnav_hm3d_v0.1/
+│  │  ├── val/
+│  │  │  ├── content/
+│  │  │  │  ├── 4ok3usBNeis.json.gz
+│  │  │  ├── val.json.gz
+│  ├── hm3d_v0.2/
+│  │  ├── val/
+│  │  │  ├── 00800-TEEsavR23oF/
+│  │  │  │  ├── TEEsavR23oF.basis.navmesh
+│  │  │  │  ├── TEEsavR23oF.basis.glb
+│  │  ├── hm3d_annotated_basis.scene_dataset_config.json
+│  ├── objectnav_hm3d_v0.2/
+│  │  ├── val/
+│  │  │  ├── content/
+│  │  │  │  ├── 4ok3usBNeis.json.gz
+│  │  │  ├── val.json.gz
+│  ├── mp3d/
+│  │  ├── 17DRP5sb8fy/
+│  │  │  ├── 17DRP5sb8fy.glb
+│  │  │  ├── 17DRP5sb8fy.house
+│  │  │  ├── 17DRP5sb8fy.navmesh
+│  │  │  ├── 17DRP5sb8fy_semantic.ply
+│  │  ├── mp3d_annotated_basis.scene_dataset_config.json
+│  ├── objectnav_mp3d/
+│  │  ├── val/
+│  │  │  ├── content/
+│  │  │  │  ├── 2azQ1b91cZZ.json.gz
+│  │  │  ├── val.json.gz
+```
+
+Set `DATASET_ROOT` in your `.env` file (see `.env.example`).
+
+Task datasets: `objectnav_hm3d_v0.1`, `objectnav_hm3d_v0.2` and `objectnav_mp3d`.
+
+### 🚩 API Keys
+
+HGWM uses **two foundation models**: a VLM for perception / coarse semantic scoring (default `Gemini-1.5-Pro`) and an LLM reasoner for goal-prior generation, structural pruning, and arbitration (default `Qwen2.5-7B-Instruct` via SiliconFlow).
+
+Copy `.env.example` to `.env` and fill in your credentials:
+
 ```bash
-./parallel.sh
+cp .env.example .env
 ```
 
-### 4. 查看结果
+```
+GEMINI_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai/"
+GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
+SILICONFLOW_API_KEY="YOUR_SILICONFLOW_API_KEY"
+DATASET_ROOT="/path/to/data"
+LOG_DIR="/path/to/logs/"
+```
+
+You can swap the backbones in `config/HGWM.yaml`:
+
+```yaml
+agent_cfg:
+  vlm_cfg:
+    model_cls: GeminiVLM           # [GeminiVLM, QwenVLM, SiliconFlowVLM]
+    model_kwargs:
+      model: gemini-1.5-pro        # [gemini-1.5-flash, gemini-1.5-pro, gemini-2.0-flash, ...]
+  llm_cfg:
+    model_cls: SiliconFlowLLM
+    model_kwargs:
+      model: Pro/Qwen/Qwen2.5-7B-Instruct
+```
+
+**Self-hosted Qwen (optional).** To run the Qwen VLM locally with vLLM:
+
 ```bash
-# 查看快速摘要
-python3 show_results.py
-
-# 查看详细分析
-python3 analyze_navigation_metrics.py
-
-# 查看完整报告
-cat EVALUATION_REPORT.md
+pip install 'vllm>0.7.2'
+pip install qwen-vl-utils accelerate
+vllm serve Qwen/Qwen2.5-VL-7B-Instruct \
+  --port 8000 --host 0.0.0.0 --dtype bfloat16 \
+  --limit-mm-per-prompt image=5,video=5
 ```
 
-## 核心文件说明
+Then point the env to the local endpoint:
 
-### 评估脚本
-- `parallel.sh`: 主要评估脚本，启动多个并行实例
-- `analyze_navigation_metrics.py`: 分析脚本，计算 SR 和 SPL 指标
-- `show_results.py`: 快速结果摘要显示
-
-### 测试脚本
-- `test_vlm_image.py`: VLM 图像传输功能测试
-
-### 配置和源码
-- `config/WMNav.yaml`: 系统配置文件
-- `src/api.py`: SiliconFlow API 集成
-- `src/WMNav_agent.py`: 导航智能体实现
-- `src/WMNav_env.py`: 环境包装器
-
-### 结果文件
-- `navigation_evaluation_results.json`: 完整的评估结果数据
-- `EVALUATION_REPORT.md`: 详细的评估报告
-- `logs/`: 所有实例的执行日志
-
-## 评估指标
-
-### Success Rate (SR)
-成功完成导航任务的回合百分比：
 ```
-SR = (成功回合数 / 总回合数) × 100%
+GEMINI_BASE_URL="http://localhost:8000/v1"
+GEMINI_API_KEY="EMPTY"
 ```
 
-### SPL (Success Rate Weighted by Inverse Path Length)
-考虑路径效率的成功率：
-```
-SPL = (1/N) × Σ(Success_i × shortest_path_i / max(actual_path_i, shortest_path_i))
-```
+Other VLM/LLM providers can be added by following the existing classes in `src/api.py`.
 
-## 最新评估结果
+## 🎮 Demo
 
-基于 434 个评估回合的结果：
+Visualize a single episode end-to-end:
 
-- **Success Rate**: 52.8%
-- **SPL**: 0.365
-- **平均步数**: 12.6 (所有回合), 8.9 (成功回合)
-
-### 按目标对象分析
-| 目标对象 | 成功率 | SPL   | 回合数 |
-|---------|--------|-------|--------|
-| Sofa    | 61.3%  | 0.441 | 80     |
-| Bed     | 56.8%  | 0.425 | 88     |
-| Toilet  | 54.1%  | 0.391 | 74     |
-| TV      | 52.1%  | 0.309 | 73     |
-| Chair   | 48.2%  | 0.310 | 83     |
-| Plant   | 33.3%  | 0.238 | 36     |
-
-## 技术特性
-
-### API 集成
-- 支持 SOCKS5 代理环境
-- 自动处理代理设置以确保 API 调用正常
-- 错误处理和重试机制
-
-### 并行处理
-- 多 GPU 支持
-- tmux 会话管理
-- 自动结果聚合
-
-### 鲁棒性
-- 日志备份分析（当聚合器失败时）
-- 完整的错误处理
-- 可恢复的评估流程
-
-## 开发说明
-
-### 添加新模型
-在 `src/api.py` 中添加新的 VLM 类，遵循现有的接口：
-```python
-class NewVLM:
-    def call_chat(self, image, text_prompt):
-        # 实现调用逻辑
-        pass
-```
-
-### 修改评估参数
-编辑 `parallel.sh` 中的配置变量：
 ```bash
-INSTANCES=10              # 并行实例数
-NUM_EPISODES_PER_INSTANCE=20  # 每实例回合数
-MAX_STEPS_PER_EPISODE=20  # 最大步数
+python scripts/main.py --config HGWM
 ```
 
-### 自定义分析
-`analyze_navigation_metrics.py` 提供了完整的分析框架，可以轻松添加新的指标计算。
+The agent will save the panoramic observations, the goal subgraph $G_{goal}$, the per-step scene graph $G_{scene}^{(t)}$, and the resulting trajectory under `logs/`.
 
-## 故障排除
+![demo](imgs/demo.gif)
 
-### API 连接问题
-1. 检查 `SILICONFLOW_API_KEY` 是否正确设置
-2. 运行 `test_vlm_image.py` 测试连接
-3. 检查代理设置是否影响 API 调用
+## 📊 Evaluation
 
-### 评估中断
-1. 检查 tmux 会话: `tmux list-sessions`
-2. 查看日志文件确认已完成的回合
-3. 运行 `analyze_navigation_metrics.py` 分析已有数据
+To evaluate HGWM at scale (HM3D v0.1: 2000 episodes, HM3D v0.2: 1000 episodes, MP3D: 2195 episodes) we use a tmux-based parallel evaluation harness. `parallel.sh` distributes `INSTANCES` workers over `GPU_LIST`, each running `NUM_EPISODES_PER_INSTANCE` episodes. A local Flask server aggregates results and uploads them to `wandb`.
 
-### 性能优化
-1. 调整 `SLEEP_INTERVAL` 减少监控频率
-2. 增加 `INSTANCES` 提高并行度
-3. 优化 VLM 提示词以提高响应速度
+```bash
+# parallel.sh (key variables)
+CFG="HGWM"                            # config name in config/${CFG}.yaml
+DATASET="hm3d_v0.2"                   # [hm3d_v0.1, hm3d_v0.2, mp3d]
+INSTANCES=10
+NUM_EPISODES_PER_INSTANCE=20          # 20 for HM3D v0.2, 40 for HM3D v0.1, 44 for MP3D
+MAX_STEPS_PER_EPISODE=40
+GPU_LIST=(0)
+VENV_NAME="hgwm"
+```
 
----
+Make sure `tmux` is installed and you are logged into `wandb`:
 
-*项目基于 HM3D 数据集和 Habitat 模拟器*  
-*使用 Qwen2.5-VL-7B-Instruct 通过 SiliconFlow API*
+```bash
+sudo apt install tmux         # Ubuntu/Debian
+wandb login
+bash parallel.sh
+```
+
+Each worker consumes ~320 MB of GPU memory. Per-step latency is dominated by VLM inference (~2.3 s for Gemini-1.5-Pro); the graph-memory update itself adds <25 ms per step.
+
+Results are written under `logs/` and uploaded to your `wandb` project.
+
+## 🔨 Customize Experiments
+
+The main configuration lives in `config/HGWM.yaml`:
+
+```yaml
+task: ObjectNav
+agent_cls: HGWMAgent          # agent class registered in src/hgwm_agent.py
+env_cls: HGWMEnv              # env class registered in src/hgwm_env.py
+
+agent_cfg:
+  navigability_mode: 'depth_sensor'
+  max_action_dist: 1.7
+  min_action_dist: 0.5
+  clip_frac: 0.66
+  stopping_action_dist: 1.5
+  default_action: 0.2
+
+  hgwm_cfg:                   # coarse-to-fine graph matching
+    max_qa_rounds: 3
+    confidence_threshold: 0.7
+    memory_decay_factor: 0.9
+    use_scene_memory: true
+    use_goal_subgraph: true
+    enable_multi_stage_reasoning: true
+    panoramic_analysis_mode: "directional_scoring"
+```
+
+The most relevant source files map directly onto the components in the paper:
+
+| File | Role in the paper |
+|------|--------------------|
+| `src/hgwm_agent.py` | Main `HGWMAgent` — predict-perceive-ground loop, coarse-to-fine matching, cognitive arbitrator. |
+| `src/hgwm_env.py`   | `HGWMEnv` — Habitat episode runner, metric logging, parallel aggregation. |
+| `src/base_agent.py` | `VLMNavAgent` and the `WMNavAgent` baseline. |
+| `src/scene_graph.py`| Spatial-semantic graph memory $M_{world}$ data structures. |
+| `src/thought_parser.py` | Robust parsing of LLM/VLM JSON outputs for graph construction. |
+| `src/api.py`        | VLM/LLM client wrappers (Gemini, SiliconFlow, Qwen). |
+| `src/custom_agent.py`, `src/custom_env.py` | Ablation variants used in the component analysis. |
+
+💡 To design your own model or rerun ablations, subclass `HGWMAgent` (or `VLMNavAgent`) in `src/custom_agent.py` and point `agent_cls`/`env_cls` in a new YAML at your class.
+
+## 📈 Results
+
+Main results on HM3D v0.1 and MP3D (zero-shot, unsupervised; see `neurips_2026.tex`):
+
+| Method | Vision | Language | HM3D v0.1 SR↑ | HM3D v0.1 SPL↑ | MP3D SR↑ | MP3D SPL↑ |
+|--------|--------|----------|---------------|----------------|----------|-----------|
+| ESC          | -                 | GPT-3.5         | 39.2 | 22.3 | 28.7 | 14.2 |
+| L3MVN        | -                 | GPT-2           | 50.4 | 23.1 |  -   |  -   |
+| SG-Nav       | LLaVA-1.6-7B      | GPT-4           | 54.0 | 24.9 | 40.2 | 16.0 |
+| UniGoal      | LLaVA-1.6-7B      | LLaMA-2-7B      | 54.5 | 25.1 | 41.0 | 16.4 |
+| WMNav        | Gemini-1.5-Pro    | -               | 58.1 | 31.2 | 45.4 | 17.2 |
+| **HGWM (Ours)** | **Gemini-1.5-Pro** | **Qwen2.5-7B-Instruct** | **62.6** | **31.5** | **46.8** | **17.9** |
+
+Component analysis on HM3D v0.2 (paper Table 3):
+
+| Variant | Memory | Decision signal | SR↑ | SPL↑ |
+|---------|--------|------------------|-----|------|
+| Basic VLM Nav            | None                          | Direct VLM scoring        | 67.8 | 29.3 |
+| VLM + Voxel Memory       | Voxel memory                  | Direct VLM scoring        | 70.9 | 32.8 |
+| **HGWM (Ours)**          | Hierarchical graph memory     | Coarse-to-fine matching   | **74.4** | 31.9 |
+
+## 🙇 Acknowledgement
+
+This work builds on many excellent open-source projects — thanks to all the authors for sharing:
+
+- [WMNav](https://github.com/B0B8K1ng/WMNavigation)
+- [VLMnav](https://github.com/Jirl-upenn/VLMnav)
+- [Pixel-Navigator](https://github.com/wzcai99/Pixel-Navigator)
+- [habitat-lab](https://github.com/facebookresearch/habitat-lab) / [habitat-sim](https://github.com/facebookresearch/habitat-sim)
+- [Matterport3D](https://niessner.github.io/Matterport/)
+
+## 📑 Citation
+
+If you find HGWM useful in your research, please cite our paper:
+
+```bibtex
+@inproceedings{hgwm2026,
+  title     = {HGWM: Hierarchical Graph-guided World Model for Zero-shot Object Navigation via Graph Matching},
+  author    = {Anonymous Author(s)},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2026}
+}
+```

@@ -10,8 +10,7 @@ import concurrent.futures
 from simWrapper import PolarAction
 from utils import *
 from api import *
-from WMNav_agent import *
-from graph_memory_agent import *
+from base_agent import *
 
 class a(VLMNavAgent):
     def _initialize_vlms(self, cfg: dict):
@@ -3215,8 +3214,6 @@ class CustomAgent(VLMNavAgent):
         raise ValueError('Prompt type must be goal, predicting, planning, or action')
     
     
-from cotgraph_agent import CoTGraphAgent
+from hgwm_agent import HGWMAgent
 
-
-CoTGNav = CoTGraphAgent
-globals()['CoTGNav'] = CoTGraphAgent
+globals()['HGWMAgent'] = HGWMAgent

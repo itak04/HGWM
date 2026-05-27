@@ -1,19 +1,18 @@
 #!/bin/bash
 
 # Configuration Variables
-ROOT_DIR=/home/ps/dqf/GoalNav/WMNavigation
-CONDA_PATH=/home/ps/anaconda3/etc/profile.d/conda.sh
+ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+CONDA_PATH="${CONDA_PATH:-$HOME/miniconda3/etc/profile.d/conda.sh}"
 NUM_GPU=1
 INSTANCES=10
 NUM_EPISODES_PER_INSTANCE=200
 MAX_STEPS_PER_EPISODE=40
 TASK="ObjectNav"
 DATASET="hm3d_v0.1"
-# In parallel.sh, update these variables
-CFG="WMNav"  # Changed from WGNav to WMNav
-NAME="wmnav_function"  # Simplified name for tmux compatibility
-PROJECT_NAME="WMNav"
-VENV_NAME="wmnav"
+CFG="HGWM"                # YAML config in config/${CFG}.yaml
+NAME="hgwm_eval"          # tmux-safe run name
+PROJECT_NAME="HGWM"
+VENV_NAME="hgwm"
 GPU_LIST=(0)
 SLEEP_INTERVAL=200
 LOG_FREQ=1
@@ -137,7 +136,7 @@ except Exception as e:
     if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
       # 检查Python进程是否仍在运行
       LAST_LINE=$(tmux capture-pane -t "$SESSION_NAME" -p | tail -1)
-      if echo "$LAST_LINE" | grep -q "(wmnav) ps@"; then
+      if echo "$LAST_LINE" | grep -qE "\(${VENV_NAME}\) [^@]+@"; then
         # Session shows shell prompt, meaning Python process finished
         echo "实例 $instance_id 已完成 (显示shell提示符)"
       else

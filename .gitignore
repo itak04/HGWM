@@ -1,7 +1,9 @@
 .idea/
+.vscode/
 __pycache__/
+*.pyc
+*.egg-info/
 data/
 logs/
-.vscode/
 wandb/
-src/VLMnav.egg-info/
+.env

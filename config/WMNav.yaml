@@ -1,6 +1,6 @@
 task: ObjectNav
 agent_cls: WMNavAgent
-env_cls: WMNavEnv
+env_cls: HGWMEnv
 
 agent_cfg:
   navigability_mode: 'depth_sensor' # one of ['none' (ours w/o nav), 'depth_estimate' (ZoeDepth), 'segmentation' (Segformer), 'depth_sensor' (Ours)]

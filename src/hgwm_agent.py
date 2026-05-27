@@ -8,28 +8,25 @@ import logging
 import ast
 import habitat_sim
 
-from WMNav_agent import WMNavAgent
+from base_agent import WMNavAgent
 from simWrapper import PolarAction
 from utils import *
 from api import *
 
-print("🚀 CoTGraphAgent loading...")
+logging.info("HGWMAgent module loaded")
 
 
-class CoTGraphAgent(WMNavAgent):
+class HGWMAgent(WMNavAgent):
+    """Hierarchical Graph-guided World Model navigation agent (HGWM).
+
+    Implements the predict-perceive-ground cycle described in the paper:
+    an LLM-derived goal subgraph (predictive prior) is grounded against a
+    persistent spatial-semantic graph memory through coarse-to-fine graph
+    matching to produce navigation actions.
     """
-    Chain-of-Thought Graph-inspired Navigation Agent
-    
-    Implements CL-CoTNav methodology for panoramic navigation:
-    - Uses VLM for directional scoring of panoramic images
-    - Implements multi-stage reasoning: Perception -> Semantic -> Planning
-    - Maintains scene memory and goal-oriented reasoning
-    - Replaces explicit graph matching with VLM-LLM collaboration
-    """
-    
+
     def __init__(self, cfg: dict):
-        print("🚀 CoTGraphAgent initializing...")
-        logging.info("CoTGraphAgent initializing...")
+        logging.info("HGWMAgent initializing...")
         
         # Initialize memory systems first to ensure they exist
         self.cvalue_map = np.ones((self.map_size, self.map_size, 3), dtype=np.float16) * 10
@@ -58,12 +55,12 @@ class CoTGraphAgent(WMNavAgent):
         self.qa_round = 0
         self.perception_memory = []
         
-        # CoT-specific configurations
-        self.cot_cfg = cfg.get('cot_cfg', {})
-        self.max_qa_rounds = self.cot_cfg.get('max_qa_rounds', 3)
-        self.confidence_threshold = self.cot_cfg.get('confidence_threshold', 0.7)
-        self.memory_decay_factor = self.cot_cfg.get('memory_decay_factor', 0.9)
-        self.panoramic_analysis_mode = self.cot_cfg.get('panoramic_analysis_mode', 'directional_scoring')
+        # HGWM-specific configurations (back-compat with legacy cot_cfg key)
+        self.hgwm_cfg = cfg.get('hgwm_cfg', cfg.get('cot_cfg', {}))
+        self.max_qa_rounds = self.hgwm_cfg.get('max_qa_rounds', 3)
+        self.confidence_threshold = self.hgwm_cfg.get('confidence_threshold', 0.7)
+        self.memory_decay_factor = self.hgwm_cfg.get('memory_decay_factor', 0.9)
+        self.panoramic_analysis_mode = self.hgwm_cfg.get('panoramic_analysis_mode', 'directional_scoring')
         
         # Initialize parent class after setting up our attributes
         super().__init__(cfg)
@@ -84,8 +81,7 @@ class CoTGraphAgent(WMNavAgent):
             }
         }
         
-        print("🎯 CoTGraphAgent initialized successfully!")
-        logging.info("CoTGraphAgent initialized successfully!")
+        logging.info("HGWMAgent initialized successfully")
 
     def _update_unified_memory(self, key: str, data: Dict, goal: str = None):
         """
@@ -116,7 +112,7 @@ class CoTGraphAgent(WMNavAgent):
     def _initialize_llm(self, cfg: dict):
         """Initialize LLM for goal subgraph construction and reasoning"""
         try:
-            llm_cfg = cfg.get('llm_cfg', self.cot_cfg)
+            llm_cfg = cfg.get('llm_cfg', self.hgwm_cfg)
             
             # Enhanced LLM system instruction for hierarchical room-aware navigation
             llm_system_instruction = (
@@ -225,7 +221,7 @@ class CoTGraphAgent(WMNavAgent):
         self.qa_round = 0
         self.perception_memory.clear()
         
-        print("🔄 CoTGraphAgent reset complete!")
+        logging.info("HGWMAgent reset complete")
     
     def _predicting_module(self, evaluator_image, goal):
         """

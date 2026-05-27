@@ -14,7 +14,7 @@ import numpy as np
 from PIL import Image
 from simWrapper import PolarAction, SimWrapper
 from custom_agent import *
-from WMNav_env import *
+from hgwm_env import *
 from utils import *
 
 class Env_a(Env):

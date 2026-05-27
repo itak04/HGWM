@@ -13,7 +13,7 @@ import numpy as np
 
 from PIL import Image
 from simWrapper import PolarAction, SimWrapper
-from WMNav_agent import *
+from base_agent import *
 from custom_agent import *
 from utils import *
 
@@ -268,7 +268,7 @@ class Env:
 
         return metrics
 
-class WMNavEnv(Env):
+class HGWMEnv(Env):
 
     task = 'ObjectNav'
 
