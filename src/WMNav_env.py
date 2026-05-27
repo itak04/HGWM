@@ -5,7 +5,6 @@ import math
 import os
 import random
 import requests
-import time
 import traceback
 import habitat_sim
 
@@ -57,40 +56,13 @@ class Env:
 
     def _initialize_logging(self, cfg: dict):
         """
-        确保日志目录始终存在的版本
+        Initializes logging for the environment.
+
+        Args:
+            cfg (dict): Configuration dictionary containing logging settings.
         """
-        # 首先确保LOG_DIR环境变量存在
-        log_dir = os.environ.get("LOG_DIR")
-        if not log_dir:
-            log_dir = "/home/ps/dqf/GoalNav/WMNavigation/logs"
-            os.environ["LOG_DIR"] = log_dir
-            print(f"⚠️  LOG_DIR not set, using default: {log_dir}")
-        
-        # 确保LOG_DIR目录存在
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir, exist_ok=True)
-            print(f"📁 Created LOG_DIR: {log_dir}")
-        else:
-            print(f"📁 LOG_DIR exists: {log_dir}")
-        
-        # 设置日志文件路径
-        task_name = cfg.get("task", "Unknown")
-        env_name = self.cfg.get("name", "default")
-        instance = self.cfg.get("instance", 0)
-        instances = self.cfg.get("instances", 1)
-        
-        log_subdir = f'{task_name}_{env_name}'
-        log_filename = f'{instance}_of_{instances}.txt'
-        
-        # 创建完整的日志目录结构
-        full_log_dir = os.path.join(log_dir, log_subdir)
-        os.makedirs(full_log_dir, exist_ok=True)
-        
-        self.log_file = os.path.join(full_log_dir, log_filename)
-        
-        print(f"📋 Log file will be: {self.log_file}")
-        print(f"📁 Log directory structure: {full_log_dir}")
-        
+        self.log_file = os.path.join(os.environ.get("LOG_DIR"), f'{cfg["task"]}_{self.cfg["name"]}/{self.cfg["instance"]}_of_{self.cfg["instances"]}.txt')
+        os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
         if self.cfg['parallel']:
             logging.basicConfig(
                 filename=self.log_file,
@@ -120,17 +92,18 @@ class Env:
             print(f"🎯 Running specific episodes: {episode_indices}")
         else:
             # Original logic for sequential episodes
-            instance_size = math.ceil(self.num_episodes / self.cfg['instances'])
+            instance_size = math.ceil(self.num_episodes / self.cfg['instances'])  # 1000
             start_ndx = self.cfg['instance'] * instance_size
             end_ndx = self.num_episodes
             episode_indices = range(start_ndx, min(start_ndx + self.cfg['num_episodes'], end_ndx))
 
         for episode_ndx in episode_indices:
+
             self.wandb_log_data = {
-                'episode_ndx': episode_ndx,
-                'instance': self.cfg['instance'],
-                'total_episodes': self.cfg['instances'] * self.cfg['num_episodes'],
-                'task': self.task,
+                'episode_ndx': episode_ndx,  # 0
+                'instance': self.inner_run_name,  # 0_of_1
+                'total_episodes': self.cfg['instances'] * self.cfg['num_episodes'],  # 1
+                'task': self.task,  # ObjectNav
                 'task_data': {},
                 'spl': 0,
                 'goal_reached': False
@@ -203,61 +176,29 @@ class Env:
         Called after the episode is complete, saves the dataframe log, and resets the environment.
         Sends a request to the aggregator server if parallel is set to True.
         """
-        # Ensure log directory exists before saving
-        log_dir = os.environ.get("LOG_DIR")
-        episode_log_dir = os.path.join(log_dir, f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}')
-        os.makedirs(episode_log_dir, exist_ok=True)
-        
-        # Save logs and reset environment
-        self.df.to_pickle(os.path.join(episode_log_dir, 'df_results.pkl'))
+        self.df.to_pickle(os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}/df_results.pkl'))
         self.simWrapper.reset()
         self.agent.reset()
-        
-        # Send data to aggregator if in parallel mode
         if self.cfg['parallel']:
             try:
-                # Prepare metrics
                 self.wandb_log_data['spend'] = self.agent.get_spend()
                 self.wandb_log_data['default_rate'] = len(self.df[self.df['success'] == 0]) / len(self.df)
-                
-                # Add timeout and retry logic
-                for attempt in range(3):  # Try up to 3 times
-                    try:
-                        response = requests.post(
-                            f'http://localhost:{self.cfg["port"]}/log', 
-                            json=self.wandb_log_data,
-                            timeout=5  # Add 5 second timeout
-                        )
-                        if response.status_code == 200:
-                            break  # Success, exit retry loop
-                        logging.warning(f"Attempt {attempt+1}: Failed to send metrics: {response.status_code}")
-                    except requests.exceptions.RequestException as req_err:
-                        logging.warning(f"Attempt {attempt+1}: Connection error: {req_err}")
-                        if attempt < 2:  # Don't sleep on last attempt
-                            time.sleep(1)  # Wait before retrying
-                
+                response = requests.post(f'http://localhost:{self.cfg["port"]}/log', json=self.wandb_log_data)
+                if response.status_code != 200:
+                    logging.error(f"Failed to send metrics: {response.text}")
             except Exception as e:
-                logging.error(f"Error in post-episode processing: {e}")
-                for frame in traceback.extract_tb(e.__traceback__):
+                tb = traceback.extract_tb(e.__traceback__)
+                for frame in tb:
                     logging.error(f"Frame {frame.filename} line {frame.lineno}")
-    
-        # Continue with normal processing regardless of aggregator status
+                logging.error(e)
+
         logging.info(f"Success: {self.wandb_log_data['goal_reached']}")
         logging.info('\n===================RUN COMPLETE===================\n')
-        
-        # Generate GIFs if needed
         if self.cfg['log_freq'] == 1:
             create_gif(
-                os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}'), 
-                self.agent.cfg['sensor_cfg']['img_height'], 
-                self.agent.cfg['sensor_cfg']['img_width'], 
-                agent_cls=self.agent_cls
+                os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}'), self.agent.cfg['sensor_cfg']['img_height'], self.agent.cfg['sensor_cfg']['img_width'], agent_cls=self.agent_cls
             )
-            create_gif_nav(
-                os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}'),
-                1800, 1800
-            )
-            create_gif_cvalue(
+            create_gif_voxel(
                 os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}'),
                 1800, 1800
             )
@@ -350,24 +291,15 @@ class WMNavEnv(Env):
 
         self.sim_cfg['scene_config'] = os.path.join(os.environ.get("DATASET_ROOT"), scene_config_path)
         self.goals = {}
-        
-        dataset_path = os.path.join(os.environ.get("DATASET_ROOT"), objnav_path, f'{self.cfg["split"]}/content')
-        
-        if not os.path.exists(dataset_path):
-            raise FileNotFoundError(f"Dataset path does not exist: {dataset_path}")
-        
-        dataset_files = sorted(os.listdir(dataset_path))
-        print(f"Loading {len(dataset_files)} dataset files...")
 
-        for f in dataset_files:
-            with gzip.open(os.path.join(dataset_path, f), 'rt') as gz:
+        for f in sorted(os.listdir(os.path.join(os.environ.get("DATASET_ROOT"), objnav_path, f'{self.cfg["split"]}/content'))):
+            with gzip.open(os.path.join(os.environ.get("DATASET_ROOT"), objnav_path, f'{self.cfg["split"]}/content/{f}'), 'rt') as gz:
                 js = json.load(gz)
                 hsh = f.split('.')[0]
                 self.goals[hsh] = js['goals_by_category']
                 self.all_episodes += js['episodes']
 
         self.num_episodes = len(self.all_episodes)
-        print(f"Loaded {self.num_episodes} episodes from dataset")
 
     def _initialize_episode(self, episode_ndx: int):
         """
@@ -377,7 +309,6 @@ class WMNavEnv(Env):
             episode_ndx (int): The index of the episode to initialize.
         """
         super()._initialize_episode(episode_ndx)
-        self.episode_ndx = episode_ndx  # 添加：保存episode_ndx为实例属性
         episode = self.all_episodes[episode_ndx]
         if 'hm3d' in self.cfg['dataset']:
             f = episode['scene_id'].split('/')[1:]
@@ -414,12 +345,6 @@ class WMNavEnv(Env):
         self.simWrapper.set_state(pos=self.init_pos, quat=episode['start_rotation'])
         self.curr_run_name = f"{episode_ndx}_{self.simWrapper.scene_id}"
 
-        # Create log directory for this episode early 
-        log_dir = os.environ.get("LOG_DIR")
-        episode_log_dir = os.path.join(log_dir, f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}')
-        os.makedirs(episode_log_dir, exist_ok=True)
-        print(f"📁 Created episode log directory: {episode_log_dir}")
-
         obs = self.simWrapper.step(PolarAction.null)
 
         self.previous_subtask = '{}'  # Initialize the last subtask with an empty dictionary
@@ -427,272 +352,118 @@ class WMNavEnv(Env):
 
     def _step_env(self, obs: dict):
         """
-        Optimized step environment for CoTGraphAgent.
-        Simplified panoramic navigation with CoT-based directional analysis.
+        Takes a step in the environment for the BASEV1 task.
+
+        Args:
+            obs (dict): The current observation.
+
+        Returns:
+            list: The next action to be taken by the agent.
         """
         episode_images = [(obs['color_sensor'].copy())[:, :, :3]]
         color_origin = episode_images[0]
-        
-        # Rotation actions for panoramic view
-        loop_actions = {
-            'clockwise': PolarAction(0, -0.167 * np.pi),
-            'counterclock': PolarAction(0, 0.167 * np.pi)
-        }
-        
-        for i in range(11):
-            obs = self.simWrapper.step(loop_actions['clockwise'])
-            # For CoTGraphAgent, only update navigability for key directions
-            if i % 2 == 0:
-                self.agent.navigability(obs, i+1)
+
+        loop_action_clockwise = PolarAction(0, -0.167 * np.pi)
+        loop_action_counterclock = PolarAction(0, 0.167 * np.pi)
+
+        #  确定目标方向
+        for _ in range(11):
+            obs = self.simWrapper.step(loop_action_clockwise)
+            if _ % 2 == 0:
+                self.agent.navigability(obs, _+1)
             episode_images.append((obs['color_sensor'].copy())[:, :, :3])
-        
-        # Generate navigation map
         nav_map = self.agent.generate_voxel(obs['agent_state'])
-        
-        # CoT-based panoramic analysis
-        print(f"\n🎯 Starting CoT Panoramic Analysis for goal: {self.current_episode['object']}")
-        panoramic_data = self.agent.make_curiosity_value(
-            episode_images[-12:],  # Use all 12 panoramic images
-            self.current_episode['object']
-        )
-        panoramic_image, explorable_value, reason = panoramic_data
-        
-        # Determine best direction using CoT analysis
+        panoramic_image, explorable_value, reason = self.agent.make_curiosity_value(episode_images[-12:], self.current_episode['object'])
         goal_rotate, goal_reason = self.agent.update_curiosity_value(explorable_value, reason)
-        
-        print(f"🔄 CoT Analysis - Optimal Direction: {goal_rotate * 30}°")
-        
-        # CoT-based planning with enhanced scene graph data
-        pano_images = episode_images[-12:]
-        try:
-            # For CoTGraphAgent, use the optimal direction image for planning
-            if isinstance(pano_images, list) and len(pano_images) > goal_rotate and goal_rotate >= 0:
-                target_image = [pano_images[goal_rotate]]
-            else:
-                target_image = pano_images
-        except Exception as e:
-            logging.warning(f"Error selecting target image: {e}")
-            target_image = pano_images
-        
-        # Extract direction-specific scene data from the agent
-        direction_scene_data = None
-        if hasattr(self.agent, '_direction_scene_data') and self.agent._direction_scene_data:
-            direction_str = str(goal_rotate * 30)
-            if direction_str in self.agent._direction_scene_data:
-                direction_scene_data = self.agent._direction_scene_data[direction_str].copy()
-                direction_scene_data['goal_rotate'] = goal_rotate  # Ensure goal_rotate is set
-                print(f"📊 Using scene graph data for direction {goal_rotate * 30}°")
-        
-        # Enhanced planning with CoT reasoning and scene graph data
-        goal_flag, subtask = self.agent.make_plan(
-            target_image, 
-            self.previous_subtask, 
-            goal_reason, 
-            self.current_episode['object'],
-            direction_scene_data  # Pass the scene graph data for the target direction
-        )
-        
-        self.previous_subtask = subtask
-        
-        # Rotate to target direction
+
+        direction_image = episode_images[-12:][goal_rotate]
+        goal_flag, subtask = self.agent.make_plan(direction_image, self.previous_subtask, goal_reason, self.current_episode['object'])
+        self.previous_subtask = subtask # update last subtask
+        #  转向目标方向
         for j in range(min(11 - goal_rotate, 1 + goal_rotate)):
             if goal_rotate <= 6:
-                obs = self.simWrapper.step(loop_actions['clockwise'])
+                obs = self.simWrapper.step(loop_action_clockwise)
             else:
-                obs = self.simWrapper.step(loop_actions['counterclock'])
+                obs = self.simWrapper.step(loop_action_counterclock)
 
-        # Generate curiosity value map
         cvalue_map = self.agent.draw_cvalue_map(obs['agent_state'])
-        
-        # Update observation with CoT context
+
         super()._step_env(obs)
-        obs.update({
-            'goal': self.current_episode['object'],
-            'subtask': subtask,
-            'goal_flag': goal_flag
-        })
-        
-        # Update agent position tracking
+        obs['goal'] = self.current_episode['object']  # 目标的类别，最短距离，目标位置，所有可到点
+        obs['subtask'] = subtask  # 子目标
+        obs['goal_flag'] = goal_flag  # 是否发现目标
         agent_state = obs['agent_state']
         self.agent_distance_traveled += np.linalg.norm(agent_state.position - self.prev_agent_position)
         self.prev_agent_position = agent_state.position
-        
-        # Enhanced logging for CoT analysis
-        logging.info(f"CoT Analysis - Goal: {self.current_episode['object']}, Direction: {goal_rotate * 30}°, Flag: {goal_flag}")
-        
-        # Get agent action with CoT context
-        agent_action, metadata = self.agent.step(obs)
+        agent_action, metadata = self.agent.step(obs)  # 整个模型前向运行一次，返回动作和结果
         step_metadata = metadata['step_metadata']
-        
-        # Enhanced logging data for CoT
-        cot_stats = {}
-        if hasattr(self.agent, 'get_optimization_stats'):
-            cot_stats = self.agent.get_optimization_stats()
-        
-        # Extract goal subgraph information for logging
-        goal_subgraph_info = {}
-        if hasattr(self.agent, 'goal_subgraph') and self.agent.goal_subgraph:
-            goal_subgraph = self.agent.goal_subgraph
-            goal_subgraph_info = {
-                'target_rooms': goal_subgraph.get('target_rooms', []),
-                'nodes_count': len(goal_subgraph.get('nodes', [])),
-                'edges_count': len(goal_subgraph.get('edges', [])),
-                'vlm_semantic_hints': goal_subgraph.get('vlm_semantic_hints', {}),
-                'subgraph_cached': hasattr(self.agent, 'goal_subgraph_cache') and 
-                                 self.current_episode['object'] in getattr(self.agent, 'goal_subgraph_cache', {}),
-                'construction_method': goal_subgraph.get('construction_method', 'llm_generated')
-            }
-            
-            # Add overlap calculation details if available
-            if hasattr(self.agent, 'scene_memory') and self.agent.scene_memory:
-                last_overlap = self.agent.scene_memory.get('last_overlap_analysis', {})
-                if last_overlap:
-                    goal_subgraph_info['last_overlap_score'] = last_overlap.get('overlap_score', 0)
-                    goal_subgraph_info['exploration_strategy'] = last_overlap.get('exploration_strategy', 'unknown')
-                    goal_subgraph_info['matched_objects'] = len(last_overlap.get('matched_pairs', []))
-        
-        log_responses = {
-            'COT_EVALUATOR_RESPONSE': {
-                'goal_rotate_degrees': goal_rotate * 30,
-                'explorable_value': explorable_value,
-                'reason': reason,
-                'cot_stats': cot_stats
-            },
-            'COT_PLANNING_RESPONSE': {
-                'goal_flag': goal_flag,
-                'subtask': subtask,
-                'goal_reason': goal_reason
-            },
-            'GOAL_SUBGRAPH_RESPONSE': {
-                'target_object': self.current_episode['object'],
-                'subgraph_info': goal_subgraph_info,
-                'step_number': self.step,
-                'episode_id': self.episode_ndx
-            }
-        }
-        
-        for key, value in log_responses.items():
-            metadata['logging_data'][key] = str(value)
-        
-        # Image processing and visualization
+        metadata['logging_data']['EVALUATOR_RESPONSE'] = str({'goal_rotate':goal_rotate*30, 'explorable_value': explorable_value, 'reason': reason})
+        metadata['logging_data']['PLANNING_RESPONSE'] = str({'goal_flag': goal_flag, 'subtask': subtask})
+        logging_data = metadata['logging_data']
+
         images = metadata['images']
-        
-        # Add step and goal information
-        if metadata.get('step') is not None:
-            color_origin = self._add_text_to_image(color_origin, f"step {metadata['step']}", (10, 30))
-        
-        if obs.get('goal') is not None:
-            color_origin = self._add_goal_text(color_origin, obs['goal'])
-        
-        # Combine visualization images
-        planner_images = {
-            'panoramic': panoramic_image,
-            'color_origin': color_origin,
-            'nav_map': nav_map,
-            'cvalue_map': cvalue_map,
-        }
-        
-        # Add CoT-specific visualizations
-        if hasattr(self.agent, 'direction_analysis') and self.agent.direction_analysis:
-            planner_images['cot_analysis'] = f"CoT Analysis: {len(self.agent.direction_analysis)} directions analyzed"
-        
-        images.update(planner_images)
-        
-        # Calculate metrics
-        metrics = self._calculate_metrics(agent_state, agent_action, 
-                                         self.current_episode['shortest_path'], self.cfg['max_steps'])
+
+        if metadata['step'] is not None:
+            step_text = f"step {metadata['step']}"
+            color_origin = np.ascontiguousarray(color_origin)
+            color_origin = cv2.putText(color_origin, step_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+
+        if obs['goal'] is not None:
+            scale_factor = color_origin.shape[0] / 1080
+            padding = 20
+            text_size = 2.5 * scale_factor
+            text_thickness = 2
+            (text_width, text_height), _ = cv2.getTextSize(f"goal:{obs['goal']}", cv2.FONT_HERSHEY_SIMPLEX, text_size, text_thickness)
+            text_position = (color_origin.shape[1] - text_width - padding, padding + text_height)
+            cv2.putText(color_origin, f"goal:{obs['goal']}", text_position, cv2.FONT_HERSHEY_SIMPLEX, text_size, (255, 0, 0), text_thickness,
+                        cv2.LINE_AA)
+
+        planner_images = {'panoramic': panoramic_image,
+                          'color_origin': color_origin,
+                          'nav_map': nav_map,
+                          'cvalue_map': cvalue_map}
+        images.update(planner_images)  # 保存规划过程的图片
+
+        metrics = self._calculate_metrics(agent_state, agent_action, self.current_episode['shortest_path'], self.cfg['max_steps'])
         step_metadata.update(metrics)
-        
-        # Log results
-        self._log(images, step_metadata, metadata['logging_data'])
-        
-        # Check episode completion
+
+        self._log(images, step_metadata, logging_data)
+
         if metrics['done']:
-            logging.info(f"Episode {self.curr_run_name} completed with status: {metrics['finish_status']}")
-            if metrics['goal_reached']:
-                logging.info(f"🎉 CoT Goal {obs['goal']} reached successfully!")
-            else:
-                logging.info(f"❌ CoT Goal {obs['goal']} not reached. Distance: {metrics['distance_to_goal']:.2f}m")
             agent_action = None
-        
+
         return agent_action
-    
-    def _add_text_to_image(self, image, text, position, color=(255, 255, 255), font_scale=1, thickness=2):
-        """优化：添加文本到图像的辅助方法"""
-        image = np.ascontiguousarray(image)
-        return cv2.putText(image, text, position, cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, thickness, cv2.LINE_AA)
-    
-    def _add_goal_text(self, image, goal):
-        """优化：添加目标文本的辅助方法"""
-        scale_factor = image.shape[0] / 1080
-        padding = 20
-        text_size = 2.5 * scale_factor
-        text_thickness = 2
-        
-        (text_width, text_height), _ = cv2.getTextSize(f"goal:{goal}", 
-                                                     cv2.FONT_HERSHEY_SIMPLEX, text_size, text_thickness)
-        text_position = (image.shape[1] - text_width - padding, padding + text_height)
-        
-        return self._add_text_to_image(image, f"goal:{goal}", text_position, (255, 0, 0), text_size, text_thickness)
 
     def _post_episode(self):
         """
         Called after the episode is complete, saves the dataframe log, and resets the environment.
         Sends a request to the aggregator server if parallel is set to True.
         """
-        # Ensure log directory exists before saving
-        log_dir = os.environ.get("LOG_DIR")
-        episode_log_dir = os.path.join(log_dir, f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}')
-        os.makedirs(episode_log_dir, exist_ok=True)
-        
-        # Save logs and reset environment
-        self.df.to_pickle(os.path.join(episode_log_dir, 'df_results.pkl'))
+        self.df.to_pickle(os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}/df_results.pkl'))
         self.simWrapper.reset()
         self.agent.reset()
-        
-        # Send data to aggregator if in parallel mode
         if self.cfg['parallel']:
             try:
-                # Prepare metrics
                 self.wandb_log_data['spend'] = self.agent.get_spend()
                 self.wandb_log_data['default_rate'] = len(self.df[self.df['success'] == 0]) / len(self.df)
-                
-                # Add timeout and retry logic
-                for attempt in range(3):  # Try up to 3 times
-                    try:
-                        response = requests.post(
-                            f'http://localhost:{self.cfg["port"]}/log', 
-                            json=self.wandb_log_data,
-                            timeout=5  # Add 5 second timeout
-                        )
-                        if response.status_code == 200:
-                            break  # Success, exit retry loop
-                        logging.warning(f"Attempt {attempt+1}: Failed to send metrics: {response.status_code}")
-                    except requests.exceptions.RequestException as req_err:
-                        logging.warning(f"Attempt {attempt+1}: Connection error: {req_err}")
-                        if attempt < 2:  # Don't sleep on last attempt
-                            time.sleep(1)  # Wait before retrying
-                
+                response = requests.post(f'http://localhost:{self.cfg["port"]}/log', json=self.wandb_log_data)
+                if response.status_code != 200:
+                    logging.error(f"Failed to send metrics: {response.text}")
             except Exception as e:
-                logging.error(f"Error in post-episode processing: {e}")
-                for frame in traceback.extract_tb(e.__traceback__):
+                tb = traceback.extract_tb(e.__traceback__)
+                for frame in tb:
                     logging.error(f"Frame {frame.filename} line {frame.lineno}")
-    
-        # Continue with normal processing regardless of aggregator status
+                logging.error(e)
+
         logging.info(f"Success: {self.wandb_log_data['goal_reached']}")
         logging.info('\n===================RUN COMPLETE===================\n')
-        
-        # Generate GIFs if needed
         if self.cfg['log_freq'] == 1:
             create_gif(
-                os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}'), 
-                self.agent.cfg['sensor_cfg']['img_height'], 
-                self.agent.cfg['sensor_cfg']['img_width'], 
-                agent_cls=self.agent_cls
+                os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}'), self.agent.cfg['sensor_cfg']['img_height'], self.agent.cfg['sensor_cfg']['img_width'], agent_cls=self.agent_cls
             )
             create_gif_nav(
-                os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}'),
-                1800, 1800
+                    os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}'),
+                    1800, 1800
             )
             create_gif_cvalue(
                 os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}'),

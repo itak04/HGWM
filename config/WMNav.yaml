@@ -21,6 +21,9 @@ agent_cfg:
     model_cls: SiliconFlowVLM
     model_kwargs:
       model: Pro/Qwen/Qwen2.5-VL-7B-Instruct
+    # model_cls: GeminiVLM
+    # model_kwargs:
+    #   model: gemini-1.5-pro
   panoramic_padding: False
 
 sim_cfg:

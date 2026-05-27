@@ -3215,11 +3215,8 @@ class CustomAgent(VLMNavAgent):
         raise ValueError('Prompt type must be goal, predicting, planning, or action')
     
     
-
-from graph_memory_agent import GraphMemoryAgent
 from cotgraph_agent import CoTGraphAgent
 
-WGNav = GraphMemoryAgent
+
 CoTGNav = CoTGraphAgent
-globals()['WGNav'] = GraphMemoryAgent
 globals()['CoTGNav'] = CoTGraphAgent

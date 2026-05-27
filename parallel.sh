@@ -10,9 +10,9 @@ MAX_STEPS_PER_EPISODE=40
 TASK="ObjectNav"
 DATASET="hm3d_v0.1"
 # In parallel.sh, update these variables
-CFG="CoTGNav"  # Changed from WGNav to CoTGNav
-NAME="cotgraph_function"  # Simplified name for tmux compatibility
-PROJECT_NAME="CoTGNav"
+CFG="WMNav"  # Changed from WGNav to WMNav
+NAME="wmnav_function"  # Simplified name for tmux compatibility
+PROJECT_NAME="WMNav"
 VENV_NAME="wmnav"
 GPU_LIST=(0)
 SLEEP_INTERVAL=200

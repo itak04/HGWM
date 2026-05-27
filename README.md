@@ -10,7 +10,7 @@
 - **完整指标**: 计算 Success Rate (SR) 和 SPL (Success Rate Weighted by Inverse Path Length)
 
 ## 快速开始
-CUDA_VISIBLE_DEVICES=0 python scripts/main.py --config CoTGNav -ms 20 -ne 1 --name CotGNav_testPredicting --instances 1 --parallel -lf 1 --port 20001 --dataset hm3d_v0.1 --instance 0 --episodes "994,964"
+CUDA_VISIBLE_DEVICES=0 python scripts/main.py --config CoTGNav -ms 20 -ne 5 --name CotGNav_FixPredict --instances 1 --parallel -lf 1 --port 20001 --dataset hm3d_v0.1 --instance 0 --episodes "994,964"
 ### 1. 环境准备
 ```bash
 # 激活conda环境
