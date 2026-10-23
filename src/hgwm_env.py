@@ -1,4 +1,6 @@
 import gzip
+from pathlib import Path
+from ablation_protocol import write_episode_result
 import json
 import logging
 import math
@@ -97,6 +99,16 @@ class Env:
             end_ndx = self.num_episodes
             episode_indices = range(start_ndx, min(start_ndx + self.cfg['num_episodes'], end_ndx))
 
+        episode_indices = list(episode_indices)
+        selected = [{'episode_index': i,
+                     'episode_id': str(self.all_episodes[i].get('episode_id', i)),
+                     'scene_id': self.all_episodes[i].get('scene_id', '')}
+                    for i in episode_indices]
+        Path(self.log_file).with_suffix('.episodes.json').write_text(
+            json.dumps({'dataset': self.cfg.get('dataset'), 'split': self.cfg.get('split'),
+                        'seed': self.cfg.get('seed', 48), 'ablation': self.cfg.get('ablation', 'full'),
+                        'selected_count': len(selected), 'episodes': selected}, indent=2), encoding='utf8')
+
         for episode_ndx in episode_indices:
 
             self.wandb_log_data = {
@@ -176,6 +188,14 @@ class Env:
         Called after the episode is complete, saves the dataframe log, and resets the environment.
         Sends a request to the aggregator server if parallel is set to True.
         """
+        result_path = Path(os.environ['LOG_DIR']) / self.outer_run_name / self.inner_run_name / self.curr_run_name / 'episode_result.json'
+        episode_index = self.wandb_log_data['episode_ndx']
+        write_episode_result(result_path, dataset=self.cfg.get('dataset'), split=self.cfg.get('split'),
+            episode_index=episode_index, episode=self.all_episodes[episode_index], seed=self.cfg.get('seed', 48),
+            ablation=self.cfg.get('ablation', 'full'), success=self.wandb_log_data['goal_reached'],
+            spl=self.wandb_log_data['spl'], path_length=self.agent_distance_traveled,
+            calls={name: meter.snapshot() for name, meter in getattr(self.agent, '_model_meters', {}).items()},
+            source_fingerprint=getattr(self, 'source_fingerprint', None))
         self.df.to_pickle(os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}/df_results.pkl'))
         self.simWrapper.reset()
         self.agent.reset()
@@ -439,6 +459,14 @@ class HGWMEnv(Env):
         Called after the episode is complete, saves the dataframe log, and resets the environment.
         Sends a request to the aggregator server if parallel is set to True.
         """
+        result_path = Path(os.environ['LOG_DIR']) / self.outer_run_name / self.inner_run_name / self.curr_run_name / 'episode_result.json'
+        episode_index = self.wandb_log_data['episode_ndx']
+        write_episode_result(result_path, dataset=self.cfg.get('dataset'), split=self.cfg.get('split'),
+            episode_index=episode_index, episode=self.all_episodes[episode_index], seed=self.cfg.get('seed', 48),
+            ablation=self.cfg.get('ablation', 'full'), success=self.wandb_log_data['goal_reached'],
+            spl=self.wandb_log_data['spl'], path_length=self.agent_distance_traveled,
+            calls={name: meter.snapshot() for name, meter in getattr(self.agent, '_model_meters', {}).items()},
+            source_fingerprint=getattr(self, 'source_fingerprint', None))
         self.df.to_pickle(os.path.join(os.environ.get("LOG_DIR"), f'{self.outer_run_name}/{self.inner_run_name}/{self.curr_run_name}/df_results.pkl'))
         self.simWrapper.reset()
         self.agent.reset()

@@ -1,0 +1,15 @@
+LOCATOR_RESPONSE
+```json
+{'Number': 1}
+```
+The sofa is present in the image. Position 1 is the best location as it is right next to the sofa.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 10, '90': 10, '150': 2, '210': 5, '270': 1, '330': 1}, 'reason': {'30': 'Sofa found in this view.', '90': 'Sofa found in this view.', '150': 'Empty corner of the room. Low score as it is unlikely a sofa would be placed here.', '210': 'View of a hallway, potentially leading to other rooms where a sofa might be.', '270': 'View appears to be a corner near a doorway, but the view is obstructed.  Unlikely to find a sofa here.', '330': 'Empty corner of the room. Low score as it is unlikely a sofa would be placed here.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the sofa', 'priority': 'medium'}, 'goal_reason': 'Sofa found in this view.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'sofa', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 29, 'episode_id': 63}
+

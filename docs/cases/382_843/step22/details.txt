@@ -1,0 +1,18 @@
+ACTION_NUMBER
+6
+
+LOCATOR_RESPONSE
+```json
+{'Number': 6}
+```
+The bed is in the image. Number 6 is the best option, as it is close enough to the bed. If a person is standing in that position, they can easily touch the bed.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 10, '90': 0, '150': 0, '210': 2, '270': 0, '330': 0}, 'reason': {'30': 'Bed is clearly visible in the image.', '90': 'Wall blocks the view, no path or relevant objects.', '150': 'Wall blocks the view, no path or relevant objects.', '210': 'A doorway is visible, potentially leading to other rooms, but no bed-related objects are in view.', '270': 'Wall blocks the view, no path or relevant objects.', '330': 'Wall blocks the view, no path or relevant objects.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the bed', 'priority': 'medium'}, 'goal_reason': 'Bed is clearly visible in the image.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 22, 'episode_id': 382}
+

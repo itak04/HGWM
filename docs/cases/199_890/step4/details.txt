@@ -1,0 +1,33 @@
+ACTION_NUMBER
+2
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the open doorway', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST PLANT, and get as close to it as possible. There are 3 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the open doorway', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST PLANT. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (330°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - doorway (unknown): spatial_pos=unknown
+  - kitchen_counter (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 2 is the best option, as it leads through the open doorway and into the next room, where the plant is located. Action 3 is also an option, but it is slightly further away from the center of the doorway, and may lead to a collision with the doorframe. Action 1 moves away from the doorway, and action 0 turns around, which is not helpful for reaching the plant.
+
+{{'action': 2}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 330, 'explorable_value': {'30': 2, '90': 0, '150': 3, '210': 4, '270': 5, '330': 7}, 'reason': {'30': 'A doorway is visible, potentially leading to another room where the plant might be.  Since the primary room is the living room, and plants are sometimes found there, the score is slightly higher than a completely unknown area.', '90': 'Just a wall, no path or plant visible.', '150': 'Open view of the living room, but no clear indication of a plant.  Slightly higher score than a dead end as it offers more room to explore.', '210': 'Living room view.  The window offers a potential path to a balcony, where a plant might be located.', '270': 'Window/Door is visible, possibly leading to a balcony or sunroom, which are potential locations for a plant. Higher score due to the direct path.', '330': 'Open doorway leading to what appears to be a kitchen or dining area. These are adjacent zones to the living room and could potentially contain the plant. Higher score due to the clear path and potential connection to relevant rooms.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the open doorway', 'priority': 'medium'}, 'goal_reason': 'Open doorway leading to what appears to be a kitchen or dining area. These are adjacent zones to the living room and could potentially contain the plant. Higher score due to the clear path and potential connection to relevant rooms.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'plant', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 4, 'episode_id': 199}
+

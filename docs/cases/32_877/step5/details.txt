@@ -1,0 +1,9 @@
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 0, '90': 2, '150': 5, '210': 7, '270': 6, '330': 0}, 'reason': {'30': 'Wall and window, no clear path or furniture suggesting proximity to a chair.', '90': 'Wooden cabinet against the wall. Could be a living room or dining room, but no chair is visible. Low score due to limited view and uncertainty.', '150': 'Open doorway suggests a transition to a different room, potentially leading to a living room, dining room, or home office where chairs are likely. Moderate score due to potential for finding the target.', '210': 'Refrigerator suggests a kitchen or dining area.  While no chairs are visible, these areas are often adjacent to dining areas or living rooms where chairs are commonly found. Higher score due to the relevance of the room type.', '270': 'Open doorway and bench suggest an entryway or hallway.  This could lead to other rooms where chairs are likely. Moderate-high score due to the potential for finding the target and the presence of a bench, which is related to seating.', '330': 'Window and wall, no clear path or furniture suggesting proximity to a chair.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Turn around and explore the room.', 'priority': 'medium'}, 'goal_reason': 'Wall and window, no clear path or furniture suggesting proximity to a chair.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'chair', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 5, 'episode_id': 32}
+

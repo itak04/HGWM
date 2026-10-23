@@ -1,0 +1,32 @@
+ACTION_NUMBER
+0
+
+ACTION_PROMPT
+TASK: {'description': 'Open the door and go through it', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST SOFA, and get as close to it as possible. There are 0 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Open the door and go through it', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST SOFA. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (150°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - door (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+I see a closed door. I will turn around to see if there are any other actions available that will help me complete the subtask "Open the door and go through it".
+
+{{'action': 0}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 150, 'explorable_value': {'30': 2, '90': 2, '150': 5, '210': 4, '270': 0, '330': 0}, 'reason': {'30': 'Empty wall, likely hallway. Low score due to lack of furniture or indicators of living spaces.', '90': 'Empty wall, likely hallway. Low score due to lack of furniture or indicators of living spaces.', '150': 'Doorway present, potentially leading to a living space. Moderate score due to the possibility of finding a sofa in the next room.', '210': 'Doorway present, potentially leading to a living space. Stairs present, but sofas are less likely to be found upstairs. Moderate score due to the possibility of finding a sofa in the next room.', '270': 'Only stairs visible. Sofas are less likely to be found on stairs. Low score due to unlikeliness of finding a sofa in this direction.', '330': 'View is obstructed. No visible features. Low score due to inability to assess the area.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Open the door and go through it', 'priority': 'medium'}, 'goal_reason': 'Doorway present, potentially leading to a living space. Moderate score due to the possibility of finding a sofa in the next room.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'sofa', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 4, 'episode_id': 63}
+

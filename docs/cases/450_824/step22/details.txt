@@ -1,0 +1,34 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the next room', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 4 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the next room', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - floor (unknown): spatial_pos=unknown
+  - plant (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+{{'action': 1}}
+
+Action 1 is the best option as it leads through the doorway to the next room, which is the current subtask.  This will get me closer to the final goal of navigating to the nearest bed.
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 1, '150': 3, '210': 7, '270': 1, '330': 1}, 'reason': {'30': 'Living room visible, but no clear indicators of a bedroom. Low score due to lack of bedroom-related objects.', '90': 'View into a kitchen. Very low chance of finding a bed here.', '150': 'Another view of the living room. Slightly higher score than 30 degrees as it offers a different perspective, but still low probability of a bed.', '210': 'Living room with a fireplace.  A doorway is partially visible behind the sofa, increasing the chances of finding other rooms, potentially a bedroom.', '270': 'Obstructed view of the living room, likely by a wall or structural element. Low score due to limited visibility and no bedroom indicators.', '330': 'Dining room visible.  Low probability of a bed being located here.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the next room', 'priority': 'medium'}, 'goal_reason': 'Living room visible, but no clear indicators of a bedroom. Low score due to lack of bedroom-related objects.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 22, 'episode_id': 450}
+

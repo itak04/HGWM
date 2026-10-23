@@ -1,0 +1,32 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go through the doorway', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 1 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go through the doorway', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (210°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - doorway (unknown): spatial_pos=unknown
+  - wall (unknown): spatial_pos=unknown
+  - floor (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 is the best option, as it moves me down the hallway, which is likely to lead to the doorway and eventually the bed. Action 0 would turn me around, which is not helpful for achieving the subtask or the final task.
+{{'action': 1}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 210, 'explorable_value': {'30': 1, '90': 2, '150': 3, '210': 7, '270': 0, '330': 0}, 'reason': {'30': 'View shows a corner of a living room. No clear pathways or bed-related objects are visible.', '90': 'View shows a dining area adjacent to a living room. No clear pathways towards a bedroom are visible.', '150': 'View shows a living area. There might be a path beyond the furniture, but it is not clear.', '210': 'View shows a clear doorway, likely leading to another room or a hallway. This is a promising path to explore for a bedroom.', '270': 'View shows a wall, indicating a dead end. No bed or related objects are visible.', '330': 'View shows a wall, indicating a dead end. No bed or related objects are visible.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go through the doorway', 'priority': 'medium'}, 'goal_reason': 'View shows a clear doorway, likely leading to another room or a hallway. This is a promising path to explore for a bedroom.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 17, 'episode_id': 382}
+

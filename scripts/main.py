@@ -1,5 +1,7 @@
 import argparse
 import yaml
+from pathlib import Path
+from ablation_protocol import ABLATIONS, apply_ablation, write_run_manifest
 
 from dotenv import load_dotenv
 from api import *
@@ -30,15 +32,29 @@ def main():
     parser.add_argument('--instance', type=int, help='Instance number for parallel execution (optional)')
     parser.add_argument('--port', type=int, help='port number for Flask server parallel execution (optional)')
     parser.add_argument('--dataset', type=str, default='hm3d_v0.2', choices=['hm3d_v0.1', 'hm3d_v0.2', 'mp3d'], help='Type of dataset')
+    parser.add_argument(
+        '--ablation',
+        default='full',
+        choices=sorted(ABLATIONS),
+        help='Reviewer-requested leave-one-component-out or weight-sensitivity variant',
+    )
 
+    parser.add_argument('--seed', type=int, default=48, help='Python/NumPy seed; remote inference may remain stochastic')
     args = parser.parse_args()
+    set_seed(args.seed)
 
     # Load configuration from YAML file
     with open(f'config/{args.config}.yaml', 'r') as file:
         config = yaml.safe_load(file)
+
+    config = apply_ablation(config, args.ablation)
+    config.setdefault('env_cfg', {})['seed'] = args.seed
+    config['env_cfg']['ablation'] = args.ablation
     # Override YAML config with command-line arguments if provided
     if args.name is not None:
         config['env_cfg']['name'] = args.name
+    elif args.ablation != 'full':
+        config['env_cfg']['name'] = f"{config['env_cfg'].get('name', 'default')}_{args.ablation}"
     if args.log_freq is not None:
         config['env_cfg']['log_freq'] = args.log_freq
     if args.max_steps is not None:
@@ -63,6 +79,9 @@ def main():
     
     env_cls = globals()[config['env_cls']]
     env = env_cls(cfg=config)
+    manifest = write_run_manifest(Path(env.log_file).with_suffix('.manifest.json'), config, args.seed, args.ablation, Path(__file__).resolve().parents[1])
+    import hashlib, json
+    env.source_fingerprint = hashlib.sha256(json.dumps(manifest['source_sha256'], sort_keys=True).encode()).hexdigest()
     env.run_experiment()
 
 if __name__ == '__main__':

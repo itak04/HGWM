@@ -1,0 +1,18 @@
+ACTION_NUMBER
+3
+
+LOCATOR_RESPONSE
+```json
+{'Number': 3}
+```
+There are chairs around the dining table. Number 3 is the closest navigable point to the chairs.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 10, '90': 2, '150': 5, '210': 0, '270': 0, '330': 8}, 'reason': {'30': 'Chairs are visible around the dining table in the background. This is a high-priority target.', '90': 'Living room area with sofa and coffee table.  While chairs might be present in a living room, the dining room view (30 degrees) is a stronger candidate.', '150': 'Open doorway suggests a transition to another room, potentially one with chairs. Moderate score due to unknown room beyond.', '210': 'This appears to be a kitchen area.  Chairs are unlikely to be found here.', '270': 'Kitchen area. Chairs are unlikely to be found here.', '330': 'Partial view of dining table and chairs makes this a high-priority area to investigate.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the chair', 'priority': 'medium'}, 'goal_reason': 'Chairs are visible around the dining table in the background. This is a high-priority target.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'chair', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 2, 'episode_id': 594}
+

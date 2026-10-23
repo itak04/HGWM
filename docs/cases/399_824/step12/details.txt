@@ -1,0 +1,19 @@
+ACTION_NUMBER
+2
+
+LOCATOR_RESPONSE
+```json
+{'Number': 2}
+```
+
+The bed is visible in the image, partially obscured by the door frame. Position 2 is the closest navigable point to the bed.  It appears to be close enough to touch the bed from that location.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 8, '90': 1, '150': 2, '210': 0, '270': 0, '330': 1}, 'reason': {'30': 'A bed is visible down the hall, suggesting this is a bedroom or leads to one. High score due to direct bed sighting.', '90': 'View mostly obstructed by a closed door, offering limited exploration potential.', '150': 'Open doorway to another room, but no bed or bedroom-related objects are visible. Moderate score for exploration.', '210': 'Likely a dining area with table and chairs. No clear path or bed-related objects visible.', '270': 'Likely a living area with sofa and chairs. No clear path or bed-related objects visible.', '330': 'View mostly obstructed by a closed door, offering limited exploration potential.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the bed', 'priority': 'medium'}, 'goal_reason': 'A bed is visible down the hall, suggesting this is a bedroom or leads to one. High score due to direct bed sighting.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 12, 'episode_id': 399}
+

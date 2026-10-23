@@ -1,0 +1,16 @@
+LOCATOR_RESPONSE
+```json
+{{'Number': 1}}
+```
+
+The sofa is clearly visible in the image. Position 1 is the best choice as it is right in front of the sofa and close enough to touch it. Position 2 and 3 are further away from the sofa.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 330, 'explorable_value': {'30': 10, '90': 8, '150': 2, '210': 0, '270': 5, '330': 9}, 'reason': {'30': 'Sofa is visible in this view.', '90': 'Part of the sofa is visible and there is a clear path to another room, which could contain a sofa.', '150': 'No sofa visible, but a clear path to an unexplored area. Low score due to lack of sofa-related objects.', '210': 'No sofa or related objects visible. Path seems to be a dead end.', '270': 'Edge of a sofa is visible, suggesting it might be a combined living/dining area. Moderate score due to partial sofa visibility.', '330': 'A large portion of the sofa is visible.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the sofa', 'priority': 'medium'}, 'goal_reason': 'A large portion of the sofa is visible.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'sofa', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 5, 'episode_id': 115}
+

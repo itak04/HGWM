@@ -1,0 +1,32 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the open doorway', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST PLANT, and get as close to it as possible. There are 2 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the open doorway', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST PLANT. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (330°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - doorway (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 takes me closer to the open doorway and towards the plant, which is the final goal. Action 2 is further away from the doorway.
+
+{{'action': 1}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 330, 'explorable_value': {'30': 2, '90': 0, '150': 3, '210': 4, '270': 2, '330': 5}, 'reason': {'30': 'View along the wall in the living room.  No plant visible, but there is a clear path to another part of the room.', '90': 'The view is mostly obscured by a damaged image. No plant is visible, and the path appears blocked.', '150': 'View across the living room. No plant is visible, but there is a clear path to another part of the room.', '210': 'Living room view. No plant is visible, but the window offers a potential path to a balcony (a possible plant location).', '270': 'Living room view. No plant is visible, but the open space suggests potential paths to other areas.', '330': 'Living room view with a clear doorway leading to another room. This is a promising path to explore as the plant could be in the adjacent room.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the open doorway', 'priority': 'medium'}, 'goal_reason': 'Living room view with a clear doorway leading to another room. This is a promising path to explore as the plant could be in the adjacent room.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'plant', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 3, 'episode_id': 199}
+

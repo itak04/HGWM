@@ -1,10 +1,11 @@
 # HGWM: Hierarchical Graph-guided World Model for Zero-shot Object Navigation via Graph Matching
 
-NeurIPS 2026 Submission
+Research preprint — prepared for arXiv submission
 
-[arXiv](https://arxiv.org/) &nbsp;|&nbsp; [Project Page](https://github.com/itak04/HGWM)
+[Project page](https://itak04.github.io/HGWM/) · [Paper PDF](https://itak04.github.io/HGWM/papers/HGWM_preprint.pdf) · [Code](https://github.com/itak04/HGWM)
 
-Anonymous Author(s)
+**I-tak Ieong** — [Tsinghua University](https://www.tsinghua.edu.cn/en/)<br>
+**Hao Tang** — [Peking University](https://english.pku.edu.cn/) (corresponding author)
 
 > This repository is the official implementation of **HGWM**, a zero-shot Object Goal Navigation framework that reframes navigation as **online graph matching** between an LLM-derived predictive prior and a persistent spatial-semantic graph memory.
 
@@ -13,14 +14,14 @@ Anonymous Author(s)
 HGWM is built on top of [WMNav](https://github.com/B0B8K1ng/WMNavigation) and [VLMnav](https://github.com/Jirl-upenn/VLMnav). Our method consists of four components:
 
 - **Predictive prior** — an LLM hallucinates a hierarchical *Goal Subgraph* (rooms, anchor objects, connectivity priors) before any observation is taken.
-- **Spatial-semantic graph memory** — observations are projected to world coordinates and stored as a persistent open-vocabulary 3D scene graph that survives field-of-view loss.
-- **Coarse-to-fine graph matching** — a coarse VLM stage ranks frontier directions by goal-conditioned visual cues; a fine LLM stage performs structural pruning and weighted graph embedding against the goal prior.
+- **Spatial-semantic graph memory** — observations populate persistent spatial-semantic memory using coarse view-level depth-ray positions; these are not precise object localizations.
+- **Coarse-to-fine graph matching** — a coarse VLM stage ranks frontier directions by goal-conditioned visual cues; LLM relation refinement precedes explicit symbolic compatibility scoring against the goal prior, without a learned graph-embedding network.
 - **Cognitive fusion policy** — an arbitrator switches between *Frontier Exploration → Focused Search → Target Verification* phases, blending the coarse and fine signals based on the overlap between $G_{goal}$ and $G_{scene}^{(t)}$.
 
 ## 🔥 News
 
 - **May. 27th, 2026**: HGWM code release on GitHub.
-- **May. 15th, 2026**: HGWM paper submitted to NeurIPS 2026.
+- **Publication status**: Research preprint prepared for arXiv. An arXiv identifier has not yet been assigned; no conference acceptance is claimed.
 
 ## 📚 Table of Contents
 
@@ -104,7 +105,7 @@ Task datasets: `objectnav_hm3d_v0.1`, `objectnav_hm3d_v0.2` and `objectnav_mp3d`
 
 ### 🚩 API Keys
 
-HGWM uses **two foundation models**: a VLM for perception / coarse semantic scoring (default `Gemini-1.5-Pro`) and an LLM reasoner for goal-prior generation, structural pruning, and arbitration (default `Qwen2.5-7B-Instruct` via SiliconFlow).
+HGWM uses **two foundation models**: a VLM for perception / coarse semantic scoring (default `Gemini-1.5-Pro`) and an LLM reasoner for goal-prior generation, relation refinement, and arbitration (default `Qwen2.5-7B-Instruct` via SiliconFlow).
 
 Copy `.env.example` to `.env` and fill in your credentials:
 
@@ -192,7 +193,80 @@ Each worker consumes ~320 MB of GPU memory. Per-step latency is dominated by VLM
 
 Results are written under `logs/` and uploaded to your `wandb` project.
 
+### Reviewer ablations and repetitive-exploration metrics
+
+The component controls used for the paper revision are exposed through one
+command-line flag. Use identical episode selections and seeds for comparisons;
+inspect each flag because some controls change multiple components:
+
+```bash
+python scripts/main.py --config HGWM --dataset hm3d_v0.2 --ablation full
+python scripts/main.py --config HGWM --dataset hm3d_v0.2 --ablation no_prior
+python scripts/main.py --config HGWM --dataset hm3d_v0.2 --ablation no_persistent_graph
+python scripts/main.py --config HGWM --dataset hm3d_v0.2 --ablation no_correction
+python scripts/main.py --config HGWM --dataset hm3d_v0.2 --ablation no_arbitration
+python scripts/main.py --config HGWM --dataset hm3d_v0.2 --ablation uniform_weights
+python scripts/main.py --config HGWM --dataset hm3d_v0.2 --ablation static_weights
+```
+
+New logs record both the agent pose and selected frontier endpoint. Quantify
+pose revisits, redundant path length, loop closures, unique spatial coverage,
+and frontier revisits with paired bootstrap confidence intervals and a paired
+randomization test:
+
+```bash
+python scripts/behavioral_metrics.py \
+  --method WMNav=/path/to/wmnav/logs \
+  --method HGWM=/path/to/hgwm/logs \
+  --baseline WMNav \
+  --output behavioral_metrics.json
+```
+
+Metric definitions and the spatial cell size are stored in the JSON output so
+the behavioral analysis is reproducible. Older logs without frontier endpoints
+remain usable for all pose-based metrics.
+
 ## 🔨 Customize Experiments
+
+### Review-revision implementation and controls
+
+The revised implementation normalizes legacy and hierarchical graph fields before
+scoring, synchronizes relation edits, and binds delayed VLM observations to queued
+depth-ray positions for persistent memory. Missing relation/depth evidence scores
+zero instead of receiving a positive default. The author reports post-repair
+aggregate results, including a three-run range on HM3D v0.1. Offline tests do not
+independently reproduce those navigation measurements; source-linked run records
+are still needed for verification.
+
+Additional explicit controls:
+
+```bash
+export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
+python scripts/main.py --config HGWM --dataset hm3d_v0.2 --seed 48 --ablation no_arbitration_matched_scale
+python scripts/main.py --config HGWM --dataset hm3d_v0.2 --seed 48 --ablation prior_prompt_only
+python scripts/main.py --config HGWM --dataset hm3d_v0.2 --seed 48 --ablation graph_memory_direct
+```
+
+`no_arbitration` preserves the historical unnormalized removal; the matched-scale
+control preserves the full fusion coefficient mass while removing the LLM term.
+`uniform_weights` uses five weights of 0.2; `static_weights` uses the configured
+non-uniform vector. These are distinct experiment names, not an interchangeable
+label. The historical 73.5/31.3 row has not been assigned to one mode without its
+original configuration.
+
+New runs save source/config/seed manifests, selected episode identities, per-role
+client-call counts and timings, and an `episode_result.json` with simulator outcomes.
+Client meters do not expose provider-internal retries or token counts. Historical
+case images and predicted goal flags are not converted into success/SPL records.
+
+```bash
+python -m unittest discover -s tests -v
+python scripts/summarize_evaluation.py --baseline /path/to/baseline --variant /path/to/variant --output paired_summary.json
+```
+
+The summary checks episode/scene/seed pairing and reports a scene-cluster bootstrap
+interval only when at least two scene clusters are present. Source-method tests use
+simulator-free fixtures; passing them is not a Habitat or model-performance result.
 
 The main configuration lives in `config/HGWM.yaml`:
 
@@ -235,7 +309,7 @@ The most relevant source files map directly onto the components in the paper:
 
 ## 📈 Results
 
-Main results on HM3D v0.1 and MP3D (zero-shot, unsupervised):
+Reported main results on HM3D v0.1 and MP3D. Baselines are literature reports, not matched reruns:
 
 | Method | Vision | Language | HM3D v0.1 SR↑ | HM3D v0.1 SPL↑ | MP3D SR↑ | MP3D SPL↑ |
 |--------|--------|----------|---------------|----------------|----------|-----------|
@@ -246,13 +320,24 @@ Main results on HM3D v0.1 and MP3D (zero-shot, unsupervised):
 | WMNav        | Gemini-1.5-Pro    | -               | 58.1 | 31.2 | 45.4 | 17.2 |
 | **HGWM (Ours)** | **Gemini-1.5-Pro** | **Qwen2.5-7B-Instruct** | **62.6** | **31.5** | **46.8** | **17.9** |
 
-Component analysis on HM3D v0.2 (paper Table 3):
+Component analysis on HM3D v0.2:
 
 | Variant | Memory | Decision signal | SR↑ | SPL↑ |
 |---------|--------|------------------|-----|------|
 | Basic VLM Nav            | None                          | Direct VLM scoring        | 67.8 | 29.3 |
-| VLM + Voxel Memory       | Voxel memory                  | Direct VLM scoring        | 70.9 | 32.8 |
+| VLM + Voxel Memory       | Voxel memory                  | Direct VLM scoring        | 70.9 | 30.1 |
 | **HGWM (Ours)**          | Hierarchical graph memory     | Coarse-to-fine matching   | **74.4** | 31.9 |
+
+The main HGWM setting on HM3D v0.1 has three author-reported runs: SR 62.3–62.8 and SPL 31.2–31.7 around the tabulated reference points. These are observed ranges, not confidence intervals; the reference point is not asserted to be a mean.
+
+| HM3D v0.2 control | SR | SPL |
+|---|---:|---:|
+| Without goal prior | 72.1 | 30.8 |
+| Without relation refinement | 72.1 | 30.4 |
+| Without LLM arbitration | 72.7 | 31.1 |
+| Non-adaptive fine weights | 73.5 | 31.3 |
+
+The exact static/uniform setting for the final row remains unarchived. Scene–goal matching gains of +1.5 SR / +1.4 SPL percentage points over prompting are author-reported; absolute arm scores and the detailed comparison protocol are not supplied. Source fixes and offline tests do not independently reproduce these navigation results. See the preprint for limitations and measurement provenance.
 
 ## 🙇 Acknowledgement
 
@@ -266,13 +351,16 @@ This work builds on many excellent open-source projects — thanks to all the au
 
 ## 📑 Citation
 
-If you find HGWM useful in your research, please cite our paper:
+If you use HGWM, cite the unpublished manuscript below. This record does not
+claim acceptance or publication at NeurIPS or any other conference. Replace it
+with the official bibliographic record if and when a publication is available.
 
 ```bibtex
-@inproceedings{hgwm2026,
+@misc{hgwm2026,
   title     = {HGWM: Hierarchical Graph-guided World Model for Zero-shot Object Navigation via Graph Matching},
-  author    = {Anonymous Author(s)},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
-  year      = {2026}
+  author    = {Ieong, I-tak and Tang, Hao},
+  year      = {2026},
+  note      = {Preprint},
+  url       = {https://github.com/itak04/HGWM}
 }
 ```

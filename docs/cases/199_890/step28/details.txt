@@ -1,0 +1,9 @@
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 330, 'explorable_value': {'30': 5, '90': 2, '150': 3, '210': 0, '270': 0, '330': 0}, 'reason': {'30': 'Open doorway leads to another room, potentially closer to the living room or other plant-friendly areas.  The radiator suggests this is a hallway or transitional space.', '90': "A closed door is visible, but it's unclear where it leads.  It could be a closet or a less promising room like a bathroom. Lower score due to uncertainty.", '150': 'The hallway continues, but there are no immediate indicators of plant-related rooms.  Moderate score for continued exploration.', '210': 'Stairs are visible, which are not a priority for finding a plant.  Unlikely to lead to the target rooms.', '270': 'The view is obstructed, likely by the agent itself or an object it is carrying. No useful information can be gleaned.', '330': 'The view is obstructed, likely by the agent itself or an object it is carrying. No useful information can be gleaned.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the plant', 'priority': 'medium'}, 'goal_reason': 'The view is obstructed, likely by the agent itself or an object it is carrying. No useful information can be gleaned.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'plant', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 28, 'episode_id': 199}
+

@@ -1,0 +1,35 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the next room', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 4 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the next room', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - chair (unknown): spatial_pos=unknown
+  - plant (unknown): spatial_pos=unknown
+  - basket (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 leads directly towards the open doorway, which is the most likely path to the next room. Thus, taking action 1 is the best way to complete the subtask "Go to the next room" and get closer to the final task of navigating to the nearest bed.
+
+{{'action': 1}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 7, '90': 2, '150': 8, '210': 9, '270': 0, '330': 1}, 'reason': {'30': 'This appears to be a living room, which is sometimes near bedrooms.  There is a clear path into the room.', '90': 'This appears to be a hallway leading to a kitchen area. Kitchens are not usually near bedrooms.', '150': 'This appears to be a living room, which is sometimes near bedrooms. There is a clear path into the room.', '210': 'This appears to be a living room, which is sometimes near bedrooms. There is a clear path into the room.', '270': 'Path is blocked by a wall.', '330': 'This appears to be a dining room. Dining rooms are not usually near bedrooms.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the next room', 'priority': 'medium'}, 'goal_reason': 'This appears to be a living room, which is sometimes near bedrooms.  There is a clear path into the room.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 24, 'episode_id': 450}
+

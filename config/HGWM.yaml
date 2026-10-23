@@ -26,6 +26,17 @@ agent_cfg:
     use_scene_memory: true
     use_goal_subgraph: true
     enable_multi_stage_reasoning: true
+    use_structural_correction: true
+    use_llm_arbitration: true
+    decision_mode: "full"             # full | prior_prompt_only | graph_direct
+    arbitration_scale: "legacy"       # legacy | matched; historical row used legacy
+    fine_weight_mode: "adaptive"       # adaptive | uniform | static
+    static_fine_weights:                # used only when fine_weight_mode=static
+      room: 0.30
+      object: 0.40
+      spatial: 0.20
+      semantic: 0.05
+      depth: 0.05
     panoramic_analysis_mode: "directional_scoring"   # or "full_panoramic"
 
   # VLM backbone used for perception and coarse semantic scoring

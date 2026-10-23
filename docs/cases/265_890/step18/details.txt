@@ -1,0 +1,15 @@
+LOCATOR_RESPONSE
+```json
+{'Number': 2}
+```
+The toilet is in the image, and circle 2 is closest to the toilet.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 10, '90': 10, '150': 2, '210': 0, '270': 0, '330': 10}, 'reason': {'30': 'Toilet is visible in the image.', '90': 'Toilet is visible in the image.', '150': 'A doorway is visible, but it is unclear where it leads. Since we are already in the bathroom, it is unlikely the toilet will be through this door.', '210': 'Laundry room is visible. This is not the target room.', '270': 'Wall and cabinet visible.  This is not the target room and appears to be a dead end.', '330': 'Toilet is visible in the image.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the toilet', 'priority': 'medium'}, 'goal_reason': 'Toilet is visible in the image.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'toilet', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 18, 'episode_id': 265}
+

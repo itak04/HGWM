@@ -1,0 +1,33 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go down the hallway.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 1 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go down the hallway.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - wall (unknown): spatial_pos=unknown
+  - picture (unknown): spatial_pos=unknown
+  - floor (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 is the best option as it moves down the hallway. Action 0 turns around, which is not helpful for going down the hallway.
+
+{{'action': 1}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 0, '150': 2, '210': 1, '270': 7, '330': 6}, 'reason': {'30': 'This appears to be a hallway.  No bed in sight, but hallways often connect to bedrooms.', '90': 'Appears to be a wall with nothing of interest.  Likely a dead end.', '150': 'This appears to be a hallway. No bed in sight, but hallways often connect to bedrooms.', '210': 'This is a dining room.  Unlikely to find a bed here.', '270': 'This is a living room. There is a clear doorway in the background, which could lead to a bedroom or hallway connected to a bedroom.  Stairs are visible, but we should prioritize other paths.', '330': 'This is a living room. There is a clear doorway in the background, which could lead to a bedroom or hallway connected to a bedroom.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go down the hallway.', 'priority': 'medium'}, 'goal_reason': 'This appears to be a hallway.  No bed in sight, but hallways often connect to bedrooms.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 18, 'episode_id': 382}
+

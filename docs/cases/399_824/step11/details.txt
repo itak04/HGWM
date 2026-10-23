@@ -1,0 +1,32 @@
+ACTION_NUMBER
+2
+
+ACTION_PROMPT
+TASK: {'description': 'Go through the doorway ahead on the right.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 2 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go through the doorway ahead on the right.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (90°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - armchairs (unknown): spatial_pos=unknown
+  - doorway (unknown): spatial_pos=unknown
+  - bed_frame (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 2 is the best option, as it leads through the doorway on the right, which is the subtask.  This should lead to the bed, which is the final task.
+{{'action': 2}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 90, 'explorable_value': {'30': 2, '90': 8, '150': 4, '210': 3, '270': 1, '330': 0}, 'reason': {'30': "This appears to be an office or den.  There is a clear path to a door, which could lead to a bedroom, but it's not certain. Low score due to the room type not being strongly associated with a bed.", '90': 'A bed frame is partially visible through the doorway, suggesting a bedroom is accessible. High score due to partial visibility of the target object.', '150': 'This appears to be a hallway.  It offers a path, but no bed or bedroom-related objects are visible. Moderate score as hallways often connect to bedrooms.', '210': 'This looks like a kitchen or dining area transitioning into a living room.  A doorway is visible, but there are no bedroom-related objects in sight. Low-moderate score due to the room type and lack of bedroom cues.', '270': 'This is a dining room. No bed or bedroom-related objects are visible. Low score due to the room type not being associated with a bed.', '330': 'This view shows a wall, indicating a dead end. No bed or bedroom-related objects are visible. Zero score as there is no path forward and no indication of a bedroom.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go through the doorway ahead on the right.', 'priority': 'medium'}, 'goal_reason': 'A bed frame is partially visible through the doorway, suggesting a bedroom is accessible. High score due to partial visibility of the target object.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 11, 'episode_id': 399}
+

@@ -1,0 +1,16 @@
+LOCATOR_RESPONSE
+```json
+{'Number': 0}
+```
+
+There is a sofa in the image. However, there are no circles/numbered locations provided in the image. Thus, I am returning 0.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 330, 'explorable_value': {'30': 10, '90': 8, '150': 2, '210': 0, '270': 5, '330': 7}, 'reason': {'30': 'Sofa found in this view.', '90': 'Open-plan area containing both living and dining furniture. Sofa visible.', '150': "View of the dining area with a clear path to another room.  Less likely to find a sofa here, but possible if it's an open-plan layout.", '210': 'Appears to be a transitional space, possibly a hallway or entryway. No sofa visible and the view is partially obstructed.', '270': 'View suggests a living room or adjacent area.  Moderate chance of finding a sofa as it could be just out of view.', '330': 'Sofa visible in the foreground.  Stairs suggest a multi-level area.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the sofa', 'priority': 'medium'}, 'goal_reason': 'Sofa visible in the foreground.  Stairs suggest a multi-level area.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'sofa', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 1, 'episode_id': 310}
+

@@ -1,0 +1,32 @@
+ACTION_NUMBER
+8
+
+ACTION_PROMPT
+TASK: {'description': 'Go into the room with the sofa.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST TV SCREEN, and get as close to it as possible. There are 8 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go into the room with the sofa.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST TV SCREEN. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (90°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - bed (unknown): spatial_pos=unknown
+  - nightstand (unknown): spatial_pos=unknown
+  - crib (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 8 will move the robot further into the room and closer to the TV. The sofa is not visible in this image, but the TV is, and the final task is to get to the TV.
+{{'action': 8}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 90, 'explorable_value': {'30': 1, '90': 1, '150': 5, '210': 2, '270': 0, '330': 1}, 'reason': {'30': 'This view shows a bedroom, which is unlikely to contain a TV. No clear pathways are visible.', '90': 'Another view of a bedroom, also unlikely to have a TV. The view is partially obstructed.', '150': 'This view shows a hallway leading to another room.  Hallways often connect to living areas, increasing the chance of finding the TV.', '210': 'Stairs are present, which are not a navigable path for the agent. Low score due to obstructed path.', '270': 'The view is completely obstructed by a wall, making this direction unnavigable and not promising for finding the TV.', '330': 'This view is mostly obstructed by a wall, with a glimpse of furniture.  It is not a clear path and provides no indication of a living area.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go into the room with the sofa.', 'priority': 'medium'}, 'goal_reason': 'Another view of a bedroom, also unlikely to have a TV. The view is partially obstructed.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'tv screen', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 16, 'episode_id': 249}
+

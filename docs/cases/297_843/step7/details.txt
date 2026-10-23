@@ -1,0 +1,9 @@
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 1, '150': 3, '210': 10, '270': 8, '330': 2}, 'reason': {'30': 'View is unclear.  May be a corner or a partially obscured doorway.', '90': 'View is unclear and appears to be a wall.', '150': 'View shows a hallway, a potential path to the bathroom.', '210': 'Toilet is visible in the image.', '270': 'Likely still in the bathroom based on the visible wall and part of the sink.', '330': 'View is unclear and appears to be a wall.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the toilet', 'priority': 'medium'}, 'goal_reason': 'View is unclear.  May be a corner or a partially obscured doorway.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'toilet', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 7, 'episode_id': 297}
+

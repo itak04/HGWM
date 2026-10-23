@@ -1,0 +1,34 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the next room', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 4 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the next room', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - chair (unknown): spatial_pos=unknown
+  - doorway (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 leads directly towards the doorway, which is the most likely path to the next room. Thus, taking action 1 is the best way to complete the subtask "Go to the next room" and eventually navigate to the nearest bed.
+
+{{'action': 1}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 1, '150': 3, '210': 7, '270': 1, '330': 4}, 'reason': {'30': 'A doorway is visible, potentially leading to a bedroom. However, the presence of living room furniture makes it uncertain.', '90': 'This appears to be a kitchen area, unlikely to contain a bed. Score low due to the low probability of finding a bed in a kitchen.', '150': 'Living room area.  Might lead to other areas, but no clear indication of a bedroom.', '210': "Living room.  A slightly higher score than 150 as there's more open space and potential for other rooms to branch off.", '270': 'Fireplace against a wall.  Unlikely to lead to a bedroom.', '330': 'Dining room with a visible door.  Could lead to a bedroom or other area, slightly higher score due to the door.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the next room', 'priority': 'medium'}, 'goal_reason': 'A doorway is visible, potentially leading to a bedroom. However, the presence of living room furniture makes it uncertain.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 20, 'episode_id': 450}
+

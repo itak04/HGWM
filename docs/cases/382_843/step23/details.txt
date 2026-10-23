@@ -1,0 +1,15 @@
+LOCATOR_RESPONSE
+```json
+{'Number': 1}
+```
+The bed is clearly visible in the image. Circle 1 is at the foot of the bed, which represents a good location to navigate to, as it is close enough to touch the bed.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 10, '90': 10, '150': 2, '210': 0, '270': 0, '330': 10}, 'reason': {'30': 'Bed is clearly visible in the center of the image.', '90': 'Bed and nightstand are clearly visible.', '150': 'A doorway is partially visible, but it is unclear where it leads.  It could lead to a hallway or another room, potentially closer to a bed.', '210': 'The view is blocked by a wall and what appears to be a closed wardrobe.  No indication of a bed in this direction.', '270': 'The view is completely blocked by a wall.', '330': 'The bed is clearly visible in the image.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the bed', 'priority': 'medium'}, 'goal_reason': 'Bed is clearly visible in the center of the image.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 23, 'episode_id': 382}
+

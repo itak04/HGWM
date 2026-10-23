@@ -1,0 +1,32 @@
+ACTION_NUMBER
+0
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the open door', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST PLANT, and get as close to it as possible. There are 1 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the open door', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST PLANT. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - dining_table (unknown): spatial_pos=unknown
+  - chairs (unknown): spatial_pos=unknown
+  - doorway (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 0 is the best option, as it will turn me around and allow me to face the open door, which is the first step towards reaching the plant. Action 1 will move me further away from the door and closer to the table, which is not helpful for completing either the subtask or the final task.
+{{'action': 0}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 1, '150': 1, '210': 0, '270': 0, '330': 3}, 'reason': {'30': 'Plants are sometimes found in dining rooms, so this is worth a low score. The open doorway suggests further exploration.', '90': 'This view shows the transition between the dining area and kitchen.  Less likely to have a plant than the dining room itself.', '150': 'This is clearly a kitchen, unlikely to contain a plant.', '210': 'The view is blocked by an unknown object and the partially visible area appears to be a closet or storage area, making it unlikely to contain a plant.', '270': 'This is a wall, a dead end. No plant visible.', '330': 'This view shows a hallway leading to another room. Hallways themselves are unlikely to have plants, but they offer access to other areas, increasing the chance of finding the plant.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the open door', 'priority': 'medium'}, 'goal_reason': 'Plants are sometimes found in dining rooms, so this is worth a low score. The open doorway suggests further exploration.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'plant', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 4, 'episode_id': 220}
+

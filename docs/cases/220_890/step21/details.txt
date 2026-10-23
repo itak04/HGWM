@@ -1,0 +1,34 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go through the doorway.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST PLANT, and get as close to it as possible. There are 3 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. In order to complete the subtask {'description': 'Go through the doorway.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST PLANT. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (90°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - tv_stand (unknown): spatial_pos=unknown
+  - coffee_table (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+{{'action': 1}}
+
+Action 1 moves towards the doorway, which is necessary to complete the subtask 'Go through the doorway.' and eventually navigate to the nearest plant.
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 90, 'explorable_value': {'30': 2, '90': 1, '150': 5, '210': 4, '270': 1, '330': 1}, 'reason': {'30': "View towards a window, potentially in the living room or sunroom. Plants are sometimes placed near windows, so there's a slight chance.", '90': 'Typical living room setup.  Low score as plants are less common directly in front of TVs.', '150': 'Open doorway leading to another room and a bookcase.  Bookcases can sometimes be in sunrooms or dining rooms, increasing the chances of finding a plant.', '210': 'Another view of the living room with a window.  Slightly higher score than 30 degrees due to the presence of a bookcase, which could be near a plant.', '270': 'Just a sofa, no clear path or plant-related objects.', '330': 'Just a sofa and a wall, no clear path or plant-related objects.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go through the doorway.', 'priority': 'medium'}, 'goal_reason': 'Typical living room setup.  Low score as plants are less common directly in front of TVs.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'plant', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 21, 'episode_id': 220}
+

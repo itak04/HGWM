@@ -1,0 +1,31 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Leave the bedroom and look for the bathroom.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST TOILET, and get as close to it as possible. There are 1 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Leave the bedroom and look for the bathroom.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST TOILET. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (270°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - doorway (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 is the best option, as it leads through the doorway, which is likely the way out of the bedroom. This will allow me to explore the rest of the house and search for the bathroom.
+
+{{'action': 1}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 270, 'explorable_value': {'30': 0, '90': 0, '150': 1, '210': 1, '270': 7, '330': 0}, 'reason': {'30': 'Wall blocking the view.', '90': 'Wall blocking the view.', '150': 'View of the bedroom, low probability of finding a toilet here.', '210': 'View of the bedroom, low probability of finding a toilet here.', '270': 'Open doorway leading out of the bedroom, potentially to a hallway or bathroom.', '330': 'Wall blocking the view.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Leave the bedroom and look for the bathroom.', 'priority': 'medium'}, 'goal_reason': 'Open doorway leading out of the bedroom, potentially to a hallway or bathroom.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'toilet', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 10, 'episode_id': 352}
+

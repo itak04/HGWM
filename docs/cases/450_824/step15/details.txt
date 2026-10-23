@@ -1,0 +1,34 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the next room', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 4 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the next room', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - plant (unknown): spatial_pos=unknown
+  - floor (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 leads directly towards the open doorway to the next room. This is the best action to take to complete the subtask "Go to the next room" and get closer to the final task of navigating to the nearest bed.
+
+{{'action': 1}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 1, '150': 3, '210': 7, '270': 1, '330': 4}, 'reason': {'30': 'Living room visible, but no bed in sight. Low score due to lack of bedroom indicators.', '90': 'Kitchen visible. Very low score as kitchens rarely contain beds.', '150': 'Another view of the living room. Slightly higher score than 30 degrees due to more furniture, but still low as no bedroom indicators are present.', '210': 'Living room. Higher score as there is a window, which could lead to a bedroom or other room with a bed.', '270': 'Fireplace visible, likely still in living room. Low score due to no bedroom indicators and partially obstructed view.', '330': 'Dining room visible with a clear doorway. Moderate score due to the possibility of the doorway leading to a bedroom or hallway connected to bedrooms.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the next room', 'priority': 'medium'}, 'goal_reason': 'Living room visible, but no bed in sight. Low score due to lack of bedroom indicators.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 15, 'episode_id': 450}
+

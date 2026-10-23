@@ -1,0 +1,15 @@
+LOCATOR_RESPONSE
+```json
+{'Number': 1}
+```
+The chair is in the image, and the arrow labeled 1 points directly at the chair.  The agent is currently standing next to the chair.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 10, '90': 8, '150': 5, '210': 2, '270': 0, '330': 1}, 'reason': {'30': 'Chairs are visible around the dining table.', '90': 'A chair is visible in the living room, near the sofa.', '150': 'View into the living room and kitchen.  A chair might be present in the living room, but it is not clearly visible from this angle.', '210': 'Kitchen area. Chairs are less likely to be found here.', '270': 'Wall blocking view. No indication of chairs.', '330': 'Mostly wall with a window.  Low probability of finding a chair here.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the chair', 'priority': 'medium'}, 'goal_reason': 'Chairs are visible around the dining table.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'chair', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 3, 'episode_id': 546}
+

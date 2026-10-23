@@ -1,0 +1,40 @@
+ACTION_NUMBER
+0
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the chair', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST CHAIR, and get as close to it as possible. There are 0 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the chair', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST CHAIR. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (270°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - dining_table (unknown): spatial_pos=unknown
+  - chairs (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+I see a chair to my right. Turning around would face me away from the chair. I should turn around to get a better view of the room and navigate to the nearest chair.
+
+{{'action': 0}}
+
+
+LOCATOR_RESPONSE
+```json
+{'Number': 0}
+```
+
+There are chairs in the image, but there are no circles/numbered locations. Thus, I am returning 0.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 270, 'explorable_value': {'30': 2, '90': 0, '150': 5, '210': 10, '270': 10, '330': 10}, 'reason': {'30': 'Living room with a potential pathway to another room.  While chairs are sometimes in living rooms, the focus is on the sofa, making a chair less likely.', '90': 'Wall with artwork. No visible exits or furniture suggesting the presence of a chair.', '150': 'Open doorway leading to an unexplored area.  Could lead to a room with a chair.', '210': 'Chairs are clearly visible around the dining table.', '270': 'Chairs are clearly visible around the dining table.', '330': 'Chairs are clearly visible around the dining table.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the chair', 'priority': 'medium'}, 'goal_reason': 'Chairs are clearly visible around the dining table.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'chair', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 6, 'episode_id': 594}
+

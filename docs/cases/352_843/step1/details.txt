@@ -1,0 +1,34 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Leave the bedroom and look for the bathroom.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST TOILET, and get as close to it as possible. There are 3 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. In order to complete the subtask {'description': 'Leave the bedroom and look for the bathroom.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST TOILET. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (90°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - nightstand (unknown): spatial_pos=unknown
+  - curtains (unknown): spatial_pos=unknown
+  - picture_frame (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 is the best option, as it leads towards the open space of the room, away from the curtains and nightstand. This will give a better view of the room and help in locating the bathroom. Action 2 and 3 lead directly into the curtains, which is not helpful. Action 4 leads towards the nightstand, which is also not helpful.
+
+{{'action': 1}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 90, 'explorable_value': {'30': 1, '90': 2, '150': 1, '210': 3, '270': 1, '330': 1}, 'reason': {'30': 'Curtains blocking the view, unlikely to lead to a toilet.', '90': 'Bedroom furniture visible. Might lead out of the room, but low probability of finding a toilet directly.', '150': 'Clearly in a bedroom, bed obstructs the path. Unlikely to find a toilet in this direction.', '210': 'Open doorway visible, potentially leading to a hallway or bathroom. Moderate chance of finding a toilet.', '270': 'View along the bedroom wall. Very low chance of finding a toilet in this direction.', '330': 'Curtains blocking the view, unlikely to lead to a toilet.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Leave the bedroom and look for the bathroom.', 'priority': 'medium'}, 'goal_reason': 'Bedroom furniture visible. Might lead out of the room, but low probability of finding a toilet directly.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'toilet', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 1, 'episode_id': 352}
+

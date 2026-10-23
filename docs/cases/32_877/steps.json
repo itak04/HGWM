@@ -1,0 +1,194 @@
+[
+  {
+    "case_id": "32_877",
+    "step": 0,
+    "source_directory": "step0",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "chair",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 1,
+      "210": 1,
+      "270": 2,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go forward",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "32_877",
+    "step": 1,
+    "source_directory": "step1",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "chair",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 0,
+      "90": 0,
+      "150": 0,
+      "210": 1,
+      "270": 0,
+      "330": 7
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go through the open doorway",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "32_877",
+    "step": 2,
+    "source_directory": "step2",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "chair",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 5,
+      "90": 0,
+      "150": 1,
+      "210": 2,
+      "270": 0,
+      "330": 0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go through the open doorway",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "32_877",
+    "step": 3,
+    "source_directory": "step3",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "chair",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 5,
+      "90": 0,
+      "150": 6,
+      "210": 7,
+      "270": 0,
+      "330": 5
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go through the open doorway",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "32_877",
+    "step": 4,
+    "source_directory": "step4",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "chair",
+    "selected_heading_degrees": 90,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 5,
+      "210": 6,
+      "270": 0,
+      "330": 3
+    },
+    "predicted_goal_flag": true,
+    "subtask": {
+      "description": "Go to the chair",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "32_877",
+    "step": 5,
+    "source_directory": "step5",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "chair",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 0,
+      "90": 2,
+      "150": 5,
+      "210": 7,
+      "270": 6,
+      "330": 0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Turn around and explore the room.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  }
+]

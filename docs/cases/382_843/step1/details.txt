@@ -1,0 +1,32 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go through the open door', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 3 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go through the open door', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - door (unknown): spatial_pos=unknown
+  - table (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 is the best option as it moves through the open door, which is the current subtask. This will likely lead to the bedroom and the bed, which is the final task. Action 2 and 3 are not good options as they move towards the table and away from the door. Action 0 is not a good option as it turns away from the door.
+
+{{'action': 1}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 1, '150': 2, '210': 0, '270': 0, '330': 2}, 'reason': {'30': "An open doorway suggests a transition to another room, potentially closer to the bedroom. However, the presence of a table doesn't strongly indicate a bedroom.", '90': 'The presence of a sofa suggests a living room, not a bedroom.  The stairs are likely not relevant to finding a bed.', '150': "Dining room furniture is visible. While there's an open area, it doesn't directly indicate proximity to a bedroom.", '210': 'Kitchen elements are visible, making it highly unlikely a bed is in this direction.', '270': 'A wall obstructs the view, indicating a dead end. No bedroom features are visible.', '330': "A closed door offers the potential for another room, but it's unclear what lies beyond. It could be a closet or another non-bedroom area."}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go through the open door', 'priority': 'medium'}, 'goal_reason': "An open doorway suggests a transition to another room, potentially closer to the bedroom. However, the presence of a table doesn't strongly indicate a bedroom."}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 1, 'episode_id': 382}
+

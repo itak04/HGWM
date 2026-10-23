@@ -1,0 +1,9 @@
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 2, '150': 5, '210': 4, '270': 10, '330': 9}, 'reason': {'30': 'Sink and countertop suggest this is a bathroom, increasing the likelihood of a toilet nearby. However, the view is partially obstructed, making it uncertain.', '90': 'Mirror and countertop reinforce that this is likely a bathroom.  The view is partially obstructed, making it uncertain if the toilet is visible.', '150': 'View shows a hallway, potentially leading to other rooms, including a bathroom.  Moderate score due to the possibility of the toilet being in an adjacent room.', '210': 'View of a hallway.  Could lead to a bathroom, but no direct indicators of a toilet.', '270': 'Toilet is clearly visible in this direction.', '330': 'Toilet is clearly visible in this direction.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the toilet', 'priority': 'medium'}, 'goal_reason': 'Sink and countertop suggest this is a bathroom, increasing the likelihood of a toilet nearby. However, the view is partially obstructed, making it uncertain.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'toilet', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 14, 'episode_id': 352}
+

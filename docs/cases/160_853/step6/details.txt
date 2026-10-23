@@ -1,0 +1,9 @@
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 2, '150': 5, '210': 8, '270': 8, '330': 10}, 'reason': {'30': 'View blocked by table. No clear path or TV visible.', '90': 'View partially obstructed by table.  Possible path but no TV visible.', '150': 'Open area, could lead to another room where a TV might be located.', '210': 'Typical living room setup.  High likelihood of a TV being nearby.', '270': 'Typical living room setup. High likelihood of a TV being nearby.', '330': 'TV is visible above the media console.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Walk around the table.', 'priority': 'medium'}, 'goal_reason': 'View blocked by table. No clear path or TV visible.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'tv screen', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 6, 'episode_id': 160}
+

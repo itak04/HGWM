@@ -1,0 +1,34 @@
+ACTION_NUMBER
+4
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the back of the room, past the sofa.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST TOILET, and get as close to it as possible. There are 4 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the back of the room, past the sofa.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST TOILET. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (270°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - tv_stand (unknown): spatial_pos=unknown
+  - armchairs (unknown): spatial_pos=unknown
+  - wall (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 4 moves past the sofa and towards the back of the room.  This is the best option to complete the subtask and get closer to the final goal.
+
+{{'action': 4}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 270, 'explorable_value': {'30': 2, '90': 1, '150': 3, '210': 4, '270': 1, '330': 2}, 'reason': {'30': "View shows a living area with a clear path towards a dining area.  While a bathroom might be connected to a dining area, it's not a strong indicator.", '90': 'View is blocked by the sofa; no clear path or bathroom-related objects are visible.', '150': 'The dark area on the right could be a doorway or another room.  Worth exploring as it is an unexplored area.', '210': 'Stairs present, but there is a clear path towards what appears to be a dining area or kitchen. Bathrooms are often located near these areas.', '270': 'View is focused on a TV area and furniture, with no clear path or bathroom-related objects.', '330': 'View shows a window to the outside. Unlikely to lead to a bathroom.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the back of the room, past the sofa.', 'priority': 'medium'}, 'goal_reason': 'View is focused on a TV area and furniture, with no clear path or bathroom-related objects.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'toilet', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 4, 'episode_id': 297}
+

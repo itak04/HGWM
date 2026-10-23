@@ -1,0 +1,33 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the doorway on the left', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST TOILET, and get as close to it as possible. There are 2 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the doorway on the left', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST TOILET. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (330°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - doorframe (unknown): spatial_pos=unknown
+  - wall (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 is the best option as it leads through the doorway on the left, which is the current subtask.  Action 2 is too far to the right. Action 0 would turn around, which is not helpful.
+
+{{'action': 1}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 330, 'explorable_value': {'30': 2, '90': 1, '150': 0, '210': 0, '270': 1, '330': 3}, 'reason': {'30': 'Open doorway, potentially leading to the bathroom.  Since bathrooms are often off hallways, this warrants a moderate score.', '90': 'The door appears to be ajar but not fully open, making it less likely to be the main path to the bathroom.', '150': 'Dining room visible.  Unlikely to contain a toilet.', '210': 'Exterior wall with window and radiator.  Unlikely to lead to a bathroom.', '270': 'Closed door, unlikely to lead to the bathroom.', '330': 'Open doorway leading to an unexplored area.  Slightly higher score than angle 30 due to the clearer view through the doorway.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the doorway on the left', 'priority': 'medium'}, 'goal_reason': 'Open doorway leading to an unexplored area.  Slightly higher score than angle 30 due to the clearer view through the doorway.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'toilet', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 9, 'episode_id': 265}
+

@@ -1,0 +1,35 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Move forward into the room.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST CHAIR, and get as close to it as possible. There are 1 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Move forward into the room.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST CHAIR. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (210°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - ottomans (unknown): spatial_pos=unknown
+  - tv (unknown): spatial_pos=unknown
+  - wall (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 is the best option, as it moves forward into the room, which satisfies the subtask.  This will also get me closer to the sofa and ottomans, which are likely near a chair.
+
+{{'action': 1}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 210, 'explorable_value': {'30': 2, '90': 0, '150': 0, '210': 8, '270': 1, '330': 2}, 'reason': {'30': 'Door potentially leading to a room where a chair might be.', '90': 'Bathroom. Unlikely to find a chair here.', '150': 'Bathroom. Unlikely to find a chair here.', '210': 'Living room. High likelihood of finding a chair near a sofa.', '270': 'Door, could lead to another room with a chair, but low probability given proximity to living room which is already visible.', '330': 'Door potentially leading to a room where a chair might be.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Move forward into the room.', 'priority': 'medium'}, 'goal_reason': 'Living room. High likelihood of finding a chair near a sofa.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'chair', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 0, 'episode_id': 594}
+

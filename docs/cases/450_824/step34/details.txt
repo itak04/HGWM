@@ -1,0 +1,26 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the next room', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 3 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the next room', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 leads directly towards the doorway, which is the most likely path to the next room.  Therefore, taking action 1 is the best choice to complete the subtask "Go to the next room" and eventually navigate to the nearest bed.
+
+{{'action': 1}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 1, '150': 3, '210': 7, '270': 1, '330': 2}, 'reason': {'30': 'A doorway is visible, suggesting access to another room which could be a bedroom.  No bed in sight, but the open doorway warrants some exploration.', '90': 'This appears to be a kitchen area.  Unlikely to find a bed here, but the path is clear for further exploration.', '150': "Living room area visible. While a bed isn't present, there's a clear path and potentially other rooms beyond.", '210': 'Living room area.  Higher score than 150 due to more open space and potential for other rooms to branch off.', '270': 'Fireplace visible, indicating living room.  Path seems somewhat obstructed, lowering the likelihood of a bed being immediately accessible.', '330': 'Dining room visible.  A doorway is visible in the background, which could lead to a bedroom, warranting a slightly higher score for exploration.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the next room', 'priority': 'medium'}, 'goal_reason': 'A doorway is visible, suggesting access to another room which could be a bedroom.  No bed in sight, but the open doorway warrants some exploration.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 34, 'episode_id': 450}
+

@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use HGWM, cite this research preprint."
+title: "HGWM: Hierarchical Graph-Guided World Model for Zero-Shot Object Navigation via Graph Matching"
+type: article
+authors:
+  - family-names: Ieong
+    given-names: I-tak
+    affiliation: Tsinghua University
+  - family-names: Tang
+    given-names: Hao
+    affiliation: Peking University
+year: 2026
+url: "https://itak04.github.io/HGWM/"
+repository-code: "https://github.com/itak04/HGWM"

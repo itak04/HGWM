@@ -1,0 +1,19 @@
+ACTION_NUMBER
+11
+
+LOCATOR_RESPONSE
+```json
+{'Number': 11}
+```
+
+The TV is in the image. Number 11 is the closest navigable point to the TV and would allow interaction with it.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 10, '90': 2, '150': 5, '210': 4, '270': 1, '330': 1}, 'reason': {'30': 'TV is visible in the image.', '90': 'Open doorway, potentially leading to another room, but no clear indicators of a TV.', '150': 'Hallway leading to other areas, moderate chance of finding the TV in an adjacent room.', '210': 'View of a hallway with a potential doorway in the background, could lead to a room with a TV.', '270': 'Wall, likely a dead end.', '330': 'Partial view of the living room, but no clear path or indication of another TV.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the tv screen', 'priority': 'medium'}, 'goal_reason': 'TV is visible in the image.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'tv screen', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 5, 'episode_id': 160}
+

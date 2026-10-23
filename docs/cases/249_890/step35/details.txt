@@ -1,0 +1,34 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the open door', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST TV SCREEN, and get as close to it as possible. There are 0 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. In order to complete the subtask {'description': 'Go to the open door', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST TV SCREEN. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (210°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - bed (unknown): spatial_pos=unknown
+  - nightstand (unknown): spatial_pos=unknown
+  - lamp (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+I see an open doorway to the left. I will move towards it using action 1. This should get me closer to the TV, which is likely in another room.
+
+{{'action': 1}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 210, 'explorable_value': {'30': 1, '90': 1, '150': 1, '210': 2, '270': 5, '330': 1}, 'reason': {'30': 'This view shows a corner of a bedroom.  No TV visible and low likelihood of a TV being in a bedroom like this.', '90': 'Another view of the bedroom. No TV visible and low likelihood of a TV being in a bedroom.', '150': 'Close-up view of the bed in the bedroom. No TV visible and low likelihood of a TV being in a bedroom.', '210': 'View of the other side of the bed with a nightstand. No TV visible, but there is a partial view of another area in the background, slightly increasing the score.', '270': 'Open doorway leads to an unexplored area, increasing the chance of finding the living room and the TV.  This is the most promising direction so far.', '330': 'Another view of furniture in the bedroom. No TV visible and low likelihood of a TV being in a bedroom.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the open door', 'priority': 'medium'}, 'goal_reason': 'View of the other side of the bed with a nightstand. No TV visible, but there is a partial view of another area in the background, slightly increasing the score.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'tv screen', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 35, 'episode_id': 249}
+

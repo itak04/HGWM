@@ -1,0 +1,33 @@
+ACTION_NUMBER
+3
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the next room', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 4 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the next room', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - plant (unknown): spatial_pos=unknown
+  - door (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+The goal bed is in the next room. Action 3 moves towards the doorway to the next room.
+
+{{'action': 3}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 5, '90': 2, '150': 4, '210': 1, '270': 0, '330': 3}, 'reason': {'30': 'Open doorway suggests a path to another room, potentially closer to the bedroom.  Since this is a living room, it is unlikely the bed is here.', '90': 'Appears to be a hallway, but no clear indicators of bedrooms. Low score due to uncertainty.', '150': "Living room furniture visible.  Slightly higher score than 30 degrees because there's more open space to explore, but still low as it's a living room.", '210': 'Living room with typical furniture. No visible exits, making it unlikely to find a bed.', '270': 'Wall blocks the view and path.  Dead end.', '330': "Dining room with a visible doorway.  Slightly higher score than 90 degrees due to the clear doorway, but still low as it's a dining room."}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the next room', 'priority': 'medium'}, 'goal_reason': 'Open doorway suggests a path to another room, potentially closer to the bedroom.  Since this is a living room, it is unlikely the bed is here.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 26, 'episode_id': 450}
+

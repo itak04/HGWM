@@ -1,0 +1,33 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'View into another part of the living room, possibly leading to another area.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 1 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'View into another part of the living room, possibly leading to another area.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (330°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - vase/decor (unknown): spatial_pos=unknown
+  - painting (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 leads further into the living room and potentially towards other areas, which is the current subtask. It also appears to be closer to the final goal of the bed. Thus, taking action 1 is the best choice.
+
+{{'action': 1}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 330, 'explorable_value': {'30': 2, '90': 1, '150': 3, '210': 2, '270': 4, '330': 2}, 'reason': {'30': 'View shows a living room area.  The presence of a dining table suggests this might be an open-plan area connected to a dining space.  Low score due to no clear path or bedroom indicators.', '90': 'Living room view with a glass door or large window, likely leading outside.  Unlikely to lead to a bedroom, hence low score.', '150': 'Living room view, possibly open-plan.  No clear bedroom indicators, but the open space warrants a slightly higher score for exploration.', '210': 'Similar to the 90-degree view, this shows a living room with a window to the outside, unlikely to lead to a bedroom.', '270': 'This view shows an open doorway or large window leading to an outdoor area. While a bedroom is unlikely directly outside, there might be a path leading to another part of the house. Moderate score for potential exploration.', '330': 'View of a living room corner. No clear pathways or bedroom indicators are visible.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'View into another part of the living room, possibly leading to another area.', 'priority': 'medium'}, 'goal_reason': 'View of a living room corner. No clear pathways or bedroom indicators are visible.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 8, 'episode_id': 382}
+

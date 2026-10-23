@@ -1,0 +1,33 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Leave the bedroom and look for the bathroom.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST TOILET, and get as close to it as possible. There are 3 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. In order to complete the subtask {'description': 'Leave the bedroom and look for the bathroom.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST TOILET. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (90°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - bed (unknown): spatial_pos=unknown
+  - wall (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 is the best option, as it leads away from the bed and towards what appears to be the exit of the bedroom. Actions 2 and 3 lead further into the bedroom, which is counterproductive to the goal of leaving the room. Action 4 is also not ideal as it leads towards the bed. Therefore, taking action 1 is the most logical choice to leave the bedroom and look for the bathroom.
+
+{{'action': 1}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 90, 'explorable_value': {'30': 0, '90': 1, '150': 1, '210': 2, '270': 0, '330': 0}, 'reason': {'30': 'Wall. No path or bathroom-related objects.', '90': 'Likely still in bedroom. Low score due to no clear path or bathroom indicators.', '150': 'Likely still in bedroom. Low score due to no clear path or bathroom indicators.', '210': 'Might be a path along the edge of the room, but no clear bathroom indicators.', '270': 'Wall. No path or bathroom-related objects.', '330': 'Blurry, likely a wall. No path or bathroom-related objects.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Leave the bedroom and look for the bathroom.', 'priority': 'medium'}, 'goal_reason': 'Likely still in bedroom. Low score due to no clear path or bathroom indicators.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'toilet', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 2, 'episode_id': 352}
+

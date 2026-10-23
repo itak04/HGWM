@@ -1,0 +1,32 @@
+ACTION_NUMBER
+0
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the open door.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST TV SCREEN, and get as close to it as possible. There are 4 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the open door.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST TV SCREEN. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - wardrobe (unknown): spatial_pos=unknown
+  - bed (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+The goal is to navigate to the nearest TV screen. I don't see any open doors in this image, and the TV is behind me. Therefore, I will turn around.
+
+{{'action': 0}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 1, '90': 1, '150': 3, '210': 5, '270': 2, '330': 2}, 'reason': {'30': 'This view shows a bedroom, unlikely to have a TV. Low score due to the room type.', '90': 'This view shows a bedroom, unlikely to have a TV. Low score due to the room type.', '150': 'Potential doorway to another room, slightly higher score for the possibility of leading to a living area, although still within the bedroom.', '210': 'A loveseat is present, which could be near a TV, but it is still within the bedroom. Moderate score due to the presence of the loveseat and potential for an adjacent room.', '270': 'Window and radiator present, no clear indicators of a TV. Low score due to lack of relevant objects.', '330': 'Window and radiator present, no clear indicators of a TV. Low score due to lack of relevant objects.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the open door.', 'priority': 'medium'}, 'goal_reason': 'This view shows a bedroom, unlikely to have a TV. Low score due to the room type.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'tv screen', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 26, 'episode_id': 249}
+

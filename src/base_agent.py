@@ -76,6 +76,7 @@ class VLMNavAgent(Agent):
             self.init_pos = agent_state.position
 
         agent_action, metadata = self._choose_action(obs)  # 做完了所有事情
+        self._attach_behavior_metadata(metadata, agent_state)
         metadata['step_metadata'].update(self.cfg)
 
         if metadata['step_metadata']['action_number'] == 0:
@@ -99,6 +100,42 @@ class VLMNavAgent(Agent):
                                                                       step=self.step_ndx)
         self.step_ndx += 1
         return agent_action, metadata
+
+    def _attach_behavior_metadata(self, metadata: dict, agent_state) -> None:
+        """Log the selected frontier endpoint for revisit/loop analysis.
+
+        Existing logs already contain the agent pose. This additional field
+        makes frontier revisits measurable without changing action selection.
+        Missing or non-forward actions are represented by ``None`` so older and
+        newer logs can be analyzed by the same script.
+        """
+        step_metadata = metadata.get('step_metadata', {})
+        step_metadata['selected_frontier_location'] = None
+        step_metadata['selected_action_radius'] = None
+        step_metadata['selected_action_theta'] = None
+
+        try:
+            action_number = int(step_metadata.get('action_number', -1))
+            candidates = list(metadata.get('a_final', []))
+            if action_number <= 0 or action_number > len(candidates):
+                return
+
+            radius, theta = candidates[action_number - 1]
+            local_endpoint = np.array([
+                radius * np.sin(theta),
+                0.0,
+                -radius * np.cos(theta),
+            ])
+            global_endpoint = local_to_global(
+                agent_state.position,
+                agent_state.rotation,
+                local_endpoint,
+            )
+            step_metadata['selected_frontier_location'] = np.asarray(global_endpoint).tolist()
+            step_metadata['selected_action_radius'] = float(radius)
+            step_metadata['selected_action_theta'] = float(theta)
+        except (TypeError, ValueError, IndexError):
+            logging.debug('Unable to attach behavior metadata', exc_info=True)
     
     def get_spend(self):
         return self.actionVLM.get_spend() + self.stoppingVLM.get_spend()

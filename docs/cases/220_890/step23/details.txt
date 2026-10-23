@@ -1,0 +1,33 @@
+ACTION_NUMBER
+0
+
+ACTION_PROMPT
+TASK: {'description': 'Go through the doorway.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST PLANT, and get as close to it as possible. There are 0 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go through the doorway.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST PLANT. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (90°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - pillows (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+I'm very close to the sofa and pillows. I should turn around to find the doorway and eventually the plant.
+
+{{'action': 0}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 90, 'explorable_value': {'30': 1, '90': 1, '150': 2, '210': 5, '270': 4, '330': 3}, 'reason': {'30': 'Close-up view of sofa, obstructing further exploration. No indication of plant.', '90': 'Close-up view of sofa, obstructing further exploration. No indication of plant.', '150': 'View towards a window, but partially blocked by the sofa.  Plants are sometimes near windows, slightly increasing the score.', '210': 'Open doorway provides access to a different area, potentially leading to one of the target rooms.', '270': 'Open doorway and bookshelf visible. Bookshelves are sometimes in sunrooms or dining rooms, which could contain a plant.', '330': 'View of a room corner with a window, but no clear indication of a plant. Toys suggest this might not be a primary location for a plant.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go through the doorway.', 'priority': 'medium'}, 'goal_reason': 'Close-up view of sofa, obstructing further exploration. No indication of plant.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'plant', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 23, 'episode_id': 220}
+

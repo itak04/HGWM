@@ -1,0 +1,31 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go down the hallway.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST PLANT, and get as close to it as possible. There are 1 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. In order to complete the subtask {'description': 'Go down the hallway.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST PLANT. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (150°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - hallway (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 is the best option as it moves down the hallway, which is the current subtask. Action 2 would move towards the dining table, which is not helpful for going down the hallway.
+
+{{'action': 1}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 150, 'explorable_value': {'30': 0, '90': 0, '150': 7, '210': 2, '270': 1, '330': 3}, 'reason': {'30': 'View is blocked by an object, likely a backpack. No discernible features to assess.', '90': 'Appears to be a wall with no openings or pathways.', '150': 'Clear view down a hallway. Hallways often connect to other rooms, increasing the chance of finding the plant.', '210': 'Dining room. Plants are sometimes placed in dining rooms, but less likely than in living rooms or sunrooms.', '270': 'Kitchen area.  Plants are less common in kitchens.', '330': 'Kitchen with a visible doorway.  The doorway offers a path to a potentially unexplored area, which could lead to the target rooms.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go down the hallway.', 'priority': 'medium'}, 'goal_reason': 'Clear view down a hallway. Hallways often connect to other rooms, increasing the chance of finding the plant.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'plant', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 5, 'episode_id': 220}
+

@@ -1,0 +1,33 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go through the doorway.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST PLANT, and get as close to it as possible. There are 2 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go through the doorway.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST PLANT. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (270°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - wall (unknown): spatial_pos=unknown
+  - window (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 will move me around the sofa, which is blocking my view of the doorway. This will help me to complete the subtask "Go through the doorway" and eventually navigate to the nearest plant.
+
+{{'action': 1}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 270, 'explorable_value': {'30': 2, '90': 2, '150': 5, '210': 4, '270': 4, '330': 3}, 'reason': {'30': 'View through a window to the outside. Low score as plants are more likely to be indoors in the context of the provided room types.', '90': 'Similar to 30 degrees, a partial view of the outside through a window.  Low score as plants are more likely to be indoors.', '150': 'View into the living room. Moderate score as this is one of the possible locations for a plant, and the path is clear for exploration.', '210': 'View of the living room. Slightly lower score than 150 as there are no immediate indicators of a plant, but the room remains a possible location.', '270': 'Another view of the living room. Similar score to 210 as there are no strong indicators of a plant.', '330': 'View of a corner in the living room. Lower score as this area seems less likely to contain a plant compared to other parts of the room.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go through the doorway.', 'priority': 'medium'}, 'goal_reason': 'Another view of the living room. Similar score to 210 as there are no strong indicators of a plant.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'plant', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 32, 'episode_id': 220}
+

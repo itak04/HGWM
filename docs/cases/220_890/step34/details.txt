@@ -1,0 +1,35 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go through the doorway.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST PLANT, and get as close to it as possible. There are 1 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. In order to complete the subtask {'description': 'Go through the doorway.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST PLANT. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (90°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - wall (unknown): spatial_pos=unknown
+  - floor (unknown): spatial_pos=unknown
+  - picture_frames (unknown): spatial_pos=unknown
+  - tv_stand (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+{{'action': 1}}
+Action 1 moves away from the sofa and towards the doorway, which is necessary to complete the subtask "Go through the doorway." and eventually navigate to the plant. Action 2 keeps the robot next to the sofa, which is not helpful for achieving either goal.
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 90, 'explorable_value': {'30': 2, '90': 1, '150': 3, '210': 1, '270': 1, '330': 2}, 'reason': {'30': 'Window view suggests potential access to garden, a possible plant location, but low score due to uncertainty.', '90': 'View blocked by sofa, no clear path or plant-related objects.', '150': 'Living room view, no immediate plant sightings, but potential for other exits.', '210': 'Wall blocks further exploration in this direction. No plant-related objects.', '270': 'Wall with radiator, no clear path or plant-related objects.', '330': 'Window view suggests potential access to garden, a possible plant location, but low score due to uncertainty.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go through the doorway.', 'priority': 'medium'}, 'goal_reason': 'View blocked by sofa, no clear path or plant-related objects.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'plant', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 34, 'episode_id': 220}
+

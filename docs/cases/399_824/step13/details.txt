@@ -1,0 +1,9 @@
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 0, '90': 2, '150': 3, '210': 10, '270': 0, '330': 0}, 'reason': {'30': 'Wall blocking the view.', '90': 'Open doorway to another room/hallway, potentially leading to other bedrooms.', '150': 'View of a hallway, could lead to other rooms including bedrooms.', '210': 'Bed is clearly visible in the center of the image.', '270': 'Wooden structure blocking the view, likely a wardrobe or similar.', '330': 'Wooden structure blocking the view, likely a wardrobe or similar.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the bed', 'priority': 'medium'}, 'goal_reason': 'Wall blocking the view.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 13, 'episode_id': 399}
+

@@ -1,0 +1,1248 @@
+[
+  {
+    "case_id": "450_824",
+    "step": 0,
+    "source_directory": "step0_ERROR",
+    "error_marked_directory": true,
+    "details_available": true,
+    "goal": null,
+    "selected_heading_degrees": null,
+    "visual_scores": null,
+    "predicted_goal_flag": null,
+    "subtask": null,
+    "logged_prior_summary": null,
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 1,
+    "source_directory": "step1",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 3.0,
+      "90": 3.0,
+      "150": 3.0,
+      "210": 3.0,
+      "270": 3.0,
+      "330": 3.0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the hallway",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 2,
+    "source_directory": "step2",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 1,
+      "90": 1,
+      "150": 2,
+      "210": 3,
+      "270": 1,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 3,
+    "source_directory": "step3",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 2,
+      "90": 0,
+      "150": 1,
+      "210": 1,
+      "270": 0,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 4,
+    "source_directory": "step4",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 90,
+    "visual_scores": {
+      "30": 1,
+      "90": 2,
+      "150": 5,
+      "210": 0,
+      "270": 1,
+      "330": 1
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 5,
+    "source_directory": "step5",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 3.0,
+      "90": 3.0,
+      "150": 3.0,
+      "210": 3.0,
+      "270": 3.0,
+      "330": 3.0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 6,
+    "source_directory": "step6",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 5,
+      "150": 3,
+      "210": 2,
+      "270": 4,
+      "330": 3
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 7,
+    "source_directory": "step7",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 4,
+      "270": 1,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 8,
+    "source_directory": "step8",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 3.0,
+      "90": 3.0,
+      "150": 3.0,
+      "210": 3.0,
+      "270": 3.0,
+      "330": 3.0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 9,
+    "source_directory": "step9",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 3.0,
+      "90": 3.0,
+      "150": 3.0,
+      "210": 3.0,
+      "270": 3.0,
+      "330": 3.0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 10,
+    "source_directory": "step10",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 0,
+      "90": 2,
+      "150": 7,
+      "210": 8,
+      "270": 3,
+      "330": 4
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 11,
+    "source_directory": "step11",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 5,
+      "150": 7,
+      "210": 3,
+      "270": 1,
+      "330": 4
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 12,
+    "source_directory": "step12",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 0,
+      "330": 1
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 13,
+    "source_directory": "step13",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 1,
+      "90": 2,
+      "150": 2,
+      "210": 3,
+      "270": 1,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 14,
+    "source_directory": "step14",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 0,
+      "90": 2,
+      "150": 7,
+      "210": 8,
+      "270": 1,
+      "330": 3
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 15,
+    "source_directory": "step15",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 1,
+      "330": 4
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 16,
+    "source_directory": "step16",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 0,
+      "330": 1
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 17,
+    "source_directory": "step17",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 5,
+      "90": 2,
+      "150": 6,
+      "210": 7,
+      "270": 1,
+      "330": 3
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 18,
+    "source_directory": "step18",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 1,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 19,
+    "source_directory": "step19",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 0,
+      "90": 2,
+      "150": 7,
+      "210": 8,
+      "270": 3,
+      "330": 4
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 20,
+    "source_directory": "step20",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 1,
+      "330": 4
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 21,
+    "source_directory": "step21",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 0,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 22,
+    "source_directory": "step22",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 1,
+      "330": 1
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 23,
+    "source_directory": "step23",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 0,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 24,
+    "source_directory": "step24",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 7,
+      "90": 2,
+      "150": 8,
+      "210": 9,
+      "270": 0,
+      "330": 1
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 25,
+    "source_directory": "step25",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 2,
+      "270": 0,
+      "330": 4
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 26,
+    "source_directory": "step26",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 5,
+      "90": 2,
+      "150": 4,
+      "210": 1,
+      "270": 0,
+      "330": 3
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 27,
+    "source_directory": "step27",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 0,
+      "90": 2,
+      "150": 5,
+      "210": 4,
+      "270": 1,
+      "330": 3
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 28,
+    "source_directory": "step28",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 5,
+      "210": 6,
+      "270": 1,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 29,
+    "source_directory": "step29",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 0,
+      "90": 5,
+      "150": 7,
+      "210": 8,
+      "270": 2,
+      "330": 3
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 30,
+    "source_directory": "step30",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 5,
+      "150": 3,
+      "210": 3,
+      "270": 1,
+      "330": 1
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 31,
+    "source_directory": "step31",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 0,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 32,
+    "source_directory": "step32",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 0,
+      "90": 2,
+      "150": 5,
+      "210": 7,
+      "270": 3,
+      "330": 4
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 33,
+    "source_directory": "step33",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 0,
+      "90": 2,
+      "150": 7,
+      "210": 8,
+      "270": 1,
+      "330": 3
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 34,
+    "source_directory": "step34",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 1,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 35,
+    "source_directory": "step35",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 1,
+      "330": 3
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the next room",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 36,
+    "source_directory": "step36",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 1,
+      "330": 4
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the open door",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 37,
+    "source_directory": "step37",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 7,
+      "90": 2,
+      "150": 6,
+      "210": 8,
+      "270": 1,
+      "330": 3
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the open door",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 38,
+    "source_directory": "step38_ERROR",
+    "error_marked_directory": true,
+    "details_available": true,
+    "goal": null,
+    "selected_heading_degrees": null,
+    "visual_scores": null,
+    "predicted_goal_flag": null,
+    "subtask": null,
+    "logged_prior_summary": null,
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "450_824",
+    "step": 39,
+    "source_directory": "step39",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 1,
+      "90": 2,
+      "150": 3,
+      "210": 2,
+      "270": 4,
+      "330": 7
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go to the open door",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  }
+]

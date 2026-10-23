@@ -1,0 +1,18 @@
+ACTION_NUMBER
+3
+
+LOCATOR_RESPONSE
+```json
+{'Number': 3}
+```
+There is a sofa in the image. Number 3 is the best option as it is closest to the sofa.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 210, 'explorable_value': {'30': 1, '90': 2, '150': 2, '210': 7, '270': 2, '330': 2}, 'reason': {'30': 'Low score due to potential obstruction in the doorway and kitchen not being a primary sofa location.', '90': 'Cabinets block the view and path. Kitchen is not a primary sofa location.', '150': 'Cabinets block the view and path. Kitchen is not a primary sofa location.', '210': 'A possible sofa is visible in the background, and the path leads to another room, increasing the chances of finding a sofa.  Stairs suggest a transition to a different level, where a living room might be located.', '270': 'Cabinets block the view and path. Kitchen is not a primary sofa location.', '330': "While there's a clear path, it remains within the kitchen, which is not a primary sofa location. Slightly higher score than blocked views due to the open path."}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the sofa', 'priority': 'medium'}, 'goal_reason': 'A possible sofa is visible in the background, and the path leads to another room, increasing the chances of finding a sofa.  Stairs suggest a transition to a different level, where a living room might be located.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'sofa', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 0, 'episode_id': 310}
+

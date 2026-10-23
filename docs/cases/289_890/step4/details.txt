@@ -1,0 +1,18 @@
+ACTION_NUMBER
+1
+
+LOCATOR_RESPONSE
+```json
+{'Number': 1}
+```
+There are chairs at the table in the image. Position 1 is the closest navigable position to the chairs.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 7, '90': 1, '150': 3, '210': 2, '270': 1, '330': 8}, 'reason': {'30': 'Chairs are visible in the dining room, suggesting a high likelihood of finding the target chair.', '90': 'Closed door, unclear what is behind it.', '150': 'Hallway continues, but no chair visible.  Could lead to other rooms.', '210': 'Hallway, but no furniture visible.', '270': 'Just a wall, no clear path or furniture.', '330': 'Dining room with chairs visible, high likelihood of finding the target chair.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the chair', 'priority': 'medium'}, 'goal_reason': 'Chairs are visible in the dining room, suggesting a high likelihood of finding the target chair.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'chair', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 4, 'episode_id': 289}
+

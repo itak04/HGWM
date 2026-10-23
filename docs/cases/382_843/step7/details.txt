@@ -1,0 +1,33 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'View into another part of the living room, possibly leading to another area.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 1 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'View into another part of the living room, possibly leading to another area.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - dining_table (unknown): spatial_pos=unknown
+  - chairs (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 leads towards the doorway, which is likely to lead to another part of the living room or a different area, thus helping to complete the subtask. It also appears to be the best path towards the final goal of navigating to the nearest bed.
+
+{{'action': 1}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 1, '150': 3, '210': 2, '270': 4, '330': 2}, 'reason': {'30': 'View shows a living area with a dining table in the background.  Low score due to no clear path or bedroom indicators.', '90': 'Focused view of the living room seating area. No clear pathways or bedroom-related objects are visible.', '150': 'View towards the back of the living room. Possible stairs suggest a different floor, but there might be other paths not visible.', '210': 'Another view of the living room focused on the seating area. No clear pathways or bedroom indicators.', '270': 'Large window/glass door might lead to another area, potentially a bedroom or a hallway. Moderate score due to the uncertainty.', '330': 'View of a corner of the room, possibly a transition between living and dining areas. No clear pathways or bedroom indicators.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'View into another part of the living room, possibly leading to another area.', 'priority': 'medium'}, 'goal_reason': 'View shows a living area with a dining table in the background.  Low score due to no clear path or bedroom indicators.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 7, 'episode_id': 382}
+

@@ -1,0 +1,35 @@
+ACTION_NUMBER
+2
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the open door', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST TV SCREEN, and get as close to it as possible. There are 2 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the open door', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST TV SCREEN. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (330°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - bed (unknown): spatial_pos=unknown
+  - dresser (unknown): spatial_pos=unknown
+  - doorway (unknown): spatial_pos=unknown
+  - washer/dryer (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+{{'action': 2}}
+
+Action 2 moves towards the open doorway, which is the current subtask.  This will likely lead to the TV which is the final goal. Action 1 moves along the side of the bed, which is not helpful for either the subtask or the final task. Action 0 (turn around) is not helpful either.
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 330, 'explorable_value': {'30': 0, '90': 0, '150': 0, '210': 2, '270': 1, '330': 5}, 'reason': {'30': 'Wall directly in front. No clear path or TV visible.', '90': 'Wall directly in front. No clear path or TV visible.', '150': 'Wall directly in front. No clear path or TV visible.', '210': 'Furniture visible, but no clear path towards a likely TV location. Low score due to being in a bedroom.', '270': 'Clearly a bedroom, very low probability of a TV here.', '330': 'Open doorway leads to another area, potentially a hallway or another room. Moderate score due to the possibility of reaching a more likely TV location.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the open door', 'priority': 'medium'}, 'goal_reason': 'Open doorway leads to another area, potentially a hallway or another room. Moderate score due to the possibility of reaching a more likely TV location.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'tv screen', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 1, 'episode_id': 160}
+

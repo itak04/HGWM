@@ -1,0 +1,770 @@
+[
+  {
+    "case_id": "382_843",
+    "step": 0,
+    "source_directory": "step0",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 1,
+      "210": 2,
+      "270": 0,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go through the open door",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 1,
+    "source_directory": "step1",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 2,
+      "210": 0,
+      "270": 0,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go through the open door",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 2,
+    "source_directory": "step2",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 1,
+      "90": 2,
+      "150": 5,
+      "210": 7,
+      "270": 1,
+      "330": 1
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Move further into the room, away from the stairs and towards the back wall.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 3,
+    "source_directory": "step3",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 90,
+    "visual_scores": {
+      "30": 1,
+      "90": 2,
+      "150": 5,
+      "210": 0,
+      "270": 7,
+      "330": 0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Move further into the room, away from the stairs and towards the back wall.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 4,
+    "source_directory": "step4",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 5,
+      "210": 0,
+      "270": 1,
+      "330": 3
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Move further into the room, away from the stairs and towards the back wall.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 5,
+    "source_directory": "step5",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 270,
+    "visual_scores": {
+      "30": 1,
+      "90": 2,
+      "150": 2,
+      "210": 5,
+      "270": 2,
+      "330": 0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Move further into the room, away from the stairs and towards the back wall.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 6,
+    "source_directory": "step6",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 150,
+    "visual_scores": {
+      "30": 1,
+      "90": 2,
+      "150": 5,
+      "210": 7,
+      "270": 2,
+      "330": 1
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "View into another part of the living room, possibly leading to another area.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 7,
+    "source_directory": "step7",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 2,
+      "270": 4,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "View into another part of the living room, possibly leading to another area.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 8,
+    "source_directory": "step8",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 2,
+      "270": 4,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "View into another part of the living room, possibly leading to another area.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 9,
+    "source_directory": "step9",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 270,
+    "visual_scores": {
+      "30": 1,
+      "90": 2,
+      "150": 3,
+      "210": 2,
+      "270": 2,
+      "330": 1
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "View into another part of the living room, possibly leading to another area.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 10,
+    "source_directory": "step10",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 90,
+    "visual_scores": {
+      "30": 1,
+      "90": 2,
+      "150": 2,
+      "210": 5,
+      "270": 7,
+      "330": 1
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "View into another part of the living room, possibly leading to another area.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 11,
+    "source_directory": "step11",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 150,
+    "visual_scores": {
+      "30": 1,
+      "90": 1,
+      "150": 2,
+      "210": 0,
+      "270": 3,
+      "330": 2
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "View into another part of the living room, possibly leading to another area.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 12,
+    "source_directory": "step12",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 90,
+    "visual_scores": {
+      "30": 0,
+      "90": 0,
+      "150": 7,
+      "210": 7,
+      "270": 0,
+      "330": 5
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "View into another part of the living room, possibly leading to another area.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 13,
+    "source_directory": "step13",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 150,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 1,
+      "210": 7,
+      "270": 0,
+      "330": 0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "View into another part of the living room, possibly leading to another area.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 14,
+    "source_directory": "step14",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 150,
+    "visual_scores": {
+      "30": 1,
+      "90": 0,
+      "150": 0,
+      "210": 7,
+      "270": 8,
+      "330": 1
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "View into another part of the living room, possibly leading to another area.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 15,
+    "source_directory": "step15",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 5,
+      "210": 7,
+      "270": 0,
+      "330": 0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "View into another part of the living room, possibly leading to another area.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 16,
+    "source_directory": "step16",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 2,
+      "90": 1,
+      "150": 3,
+      "210": 7,
+      "270": 0,
+      "330": 6
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "View into another part of the living room, possibly leading to another area.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 17,
+    "source_directory": "step17",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 210,
+    "visual_scores": {
+      "30": 1,
+      "90": 2,
+      "150": 3,
+      "210": 7,
+      "270": 0,
+      "330": 0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go through the doorway",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 18,
+    "source_directory": "step18",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 2,
+      "90": 0,
+      "150": 2,
+      "210": 1,
+      "270": 7,
+      "330": 6
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go down the hallway.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 19,
+    "source_directory": "step19",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 330,
+    "visual_scores": {
+      "30": 0,
+      "90": 0,
+      "150": 2,
+      "210": 9,
+      "270": 10,
+      "330": 1
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go down the hallway.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 20,
+    "source_directory": "step20",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 0,
+      "90": 2,
+      "150": 2,
+      "210": 7,
+      "270": 7,
+      "330": 0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go down the hallway.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 21,
+    "source_directory": "step21",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 270,
+    "visual_scores": {
+      "30": 0,
+      "90": 0,
+      "150": 7,
+      "210": 5,
+      "270": 0,
+      "330": 0
+    },
+    "predicted_goal_flag": false,
+    "subtask": {
+      "description": "Go down the hallway.",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 22,
+    "source_directory": "step22",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 10,
+      "90": 0,
+      "150": 0,
+      "210": 2,
+      "270": 0,
+      "330": 0
+    },
+    "predicted_goal_flag": true,
+    "subtask": {
+      "description": "Go to the bed",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  },
+  {
+    "case_id": "382_843",
+    "step": 23,
+    "source_directory": "step23",
+    "error_marked_directory": false,
+    "details_available": true,
+    "goal": "bed",
+    "selected_heading_degrees": 30,
+    "visual_scores": {
+      "30": 10,
+      "90": 10,
+      "150": 2,
+      "210": 0,
+      "270": 0,
+      "330": 10
+    },
+    "predicted_goal_flag": true,
+    "subtask": {
+      "description": "Go to the bed",
+      "priority": "medium"
+    },
+    "logged_prior_summary": {
+      "target_rooms": [],
+      "nodes_count": 0,
+      "edges_count": 0,
+      "vlm_semantic_hints": {},
+      "subgraph_cached": true,
+      "construction_method": "llm_generated"
+    },
+    "benchmark_success": null,
+    "benchmark_SPL": null
+  }
+]

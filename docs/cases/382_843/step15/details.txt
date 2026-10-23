@@ -1,0 +1,33 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'View into another part of the living room, possibly leading to another area.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 3 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'View into another part of the living room, possibly leading to another area.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - chair (unknown): spatial_pos=unknown
+  - floor (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 leads directly into the other part of the living room, which may lead to the bedroom and the bed. Thus, I will choose action 1.
+
+{{'action': 1}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 1, '150': 5, '210': 7, '270': 0, '330': 0}, 'reason': {'30': 'View shows a section of a living room.  While a bedroom *could* be connected, there are no strong indicators, so the score is low.', '90': 'This view shows more of the living room. No clear pathways to other rooms are visible, making it less likely to find a bed.', '150': 'There is a potential doorway or opening on the right side of this view, which could lead to a bedroom or hallway.  Moderate score due to the possibility of finding the target.', '210': 'A clear doorway is visible, suggesting a hallway or another room. This is a promising path to explore for a bedroom, hence the higher score.', '270': "This view shows an outdoor area with grass and trees.  It's highly unlikely a bed would be located here.", '330': 'This view appears to be a transition area between inside and outside, but the outdoor element makes finding a bed improbable.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'View into another part of the living room, possibly leading to another area.', 'priority': 'medium'}, 'goal_reason': 'View shows a section of a living room.  While a bedroom *could* be connected, there are no strong indicators, so the score is low.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 15, 'episode_id': 382}
+

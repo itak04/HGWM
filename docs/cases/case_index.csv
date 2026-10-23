@@ -1,0 +1,19 @@
+case_id,step_directories,text_records,error_marked_steps,target_categories,selected_steps
+115_853,6,6,0,sofa,step0;step3;step5
+160_853,7,7,1,tv screen,step0_ERROR;step3;step6
+199_890,29,29,2,plant,step0;step14;step28
+220_890,40,40,1,plant,step0;step20;step39
+249_890,40,40,7,tv screen,step0_ERROR;step20_ERROR;step39
+265_890,19,19,2,toilet,step0;step9;step18
+289_890,40,40,5,chair,step0;step20;step39
+297_843,8,8,0,toilet,step0;step4;step7
+2_877,4,4,0,bed,step0;step2;step3
+310_843,2,2,0,sofa,step0;step1
+32_877,6,6,0,chair,step0;step3;step5
+352_843,15,15,1,toilet,step0;step7;step14
+382_843,24,24,0,bed,step0;step12;step23
+399_824,14,14,0,bed,step0;step7;step13
+450_824,40,40,2,bed,step0_ERROR;step20;step39
+546_880,4,4,0,chair,step0;step2;step3
+594_829,10,9,0,chair,step0;step5;step9
+63_877,30,30,1,sofa,step0;step15;step29

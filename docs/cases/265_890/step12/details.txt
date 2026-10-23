@@ -1,0 +1,33 @@
+ACTION_NUMBER
+0
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the doorway on the right', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST TOILET, and get as close to it as possible. There are 1 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the doorway on the right', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST TOILET. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - cabinets (unknown): spatial_pos=unknown
+  - countertop (unknown): spatial_pos=unknown
+  - oven (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 0 will turn me around, which will face me towards the doorway on the right. This will allow me to complete the subtask and move closer to the final task of navigating to the nearest toilet.
+
+{{'action': 0}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 0, '150': 5, '210': 1, '270': 1, '330': 3}, 'reason': {'30': 'View of a kitchen.  No clear path towards a bathroom, but a doorway is potentially visible at angle 30.', '90': 'View of an oven.  No path or bathroom-related objects visible.', '150': 'A doorway and hallway are visible, leading to an unexplored area. This could lead to a bathroom.', '210': "View of a dining area. While connected to the kitchen, it's less likely to lead directly to a bathroom.", '270': 'View of kitchen counter and sink. No bathroom-related objects visible.', '330': 'View of a kitchen with a potential doorway on the right.  This might lead to a hallway and subsequently a bathroom.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the doorway on the right', 'priority': 'medium'}, 'goal_reason': 'View of a kitchen.  No clear path towards a bathroom, but a doorway is potentially visible at angle 30.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'toilet', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 12, 'episode_id': 265}
+

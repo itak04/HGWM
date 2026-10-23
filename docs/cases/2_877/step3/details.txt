@@ -1,0 +1,16 @@
+LOCATOR_RESPONSE
+```json
+{'Number': 0}
+```
+
+The bed is clearly visible in the image. However, there are no numbered circles indicating potential movement locations. Therefore, I am returning 0 because none of the circles represent the position of the bed.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 10, '90': 10, '150': 10, '210': 2, '270': 0, '330': 10}, 'reason': {'30': 'Bed is clearly visible in the center of the image.', '90': 'Bed is clearly visible in the center of the image.', '150': 'Bed is clearly visible in the center of the image.', '210': 'View of a doorway, potentially leading to another room, but no bed visible.', '270': 'Wall directly in front, no path or bed visible.', '330': 'Bed is clearly visible in the center of the image.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the bed', 'priority': 'medium'}, 'goal_reason': 'Bed is clearly visible in the center of the image.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 3, 'episode_id': 2}
+

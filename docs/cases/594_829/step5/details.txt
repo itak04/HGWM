@@ -1,0 +1,18 @@
+ACTION_NUMBER
+1
+
+LOCATOR_RESPONSE
+```json
+{'Number': 1}
+```
+There are chairs in the image. Number 1 is the best option, as it leads directly to the chair in front of the agent. Number 2 and 3 are further away from the chair.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 10, '90': 2, '150': 1, '210': 1, '270': 10, '330': 10}, 'reason': {'30': 'Chairs are visible around the dining table in the foreground.', '90': 'While this is a living room, which could contain chairs, the view primarily shows a sofa and coffee table. The doorway in the background offers a potential path but no chairs are visible.', '150': "This view shows a hallway with a potential doorway at the far right. No chairs are visible, and it's unclear where this hallway leads.", '210': 'This view shows a wall and a doorway/opening to another room. No chairs are visible, and the room type is uncertain.', '270': 'Chairs are clearly visible around the dining table.', '330': 'Chairs are clearly visible around the dining table.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the chair', 'priority': 'medium'}, 'goal_reason': 'Chairs are visible around the dining table in the foreground.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'chair', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 5, 'episode_id': 594}
+

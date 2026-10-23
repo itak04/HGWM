@@ -1,0 +1,18 @@
+ACTION_NUMBER
+7
+
+LOCATOR_RESPONSE
+```json
+{'Number': 7}
+```
+A bed is present in the image. Position 7 is the closest navigable point to the bed. It appears to be right next to the bed, allowing easy access.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 7, '90': 0, '150': 2, '210': 1, '270': 0, '330': 0}, 'reason': {'30': 'A bed is partially visible at the end of the hallway, suggesting the bedroom is in that direction.', '90': "The closed door blocks the path and provides no information about the bed's location.", '150': 'This direction leads to the living area, which is less likely to contain a bed than a bedroom.', '210': 'The view is partially obstructed by a wall, and the visible furniture suggests this is a living area, not a bedroom.', '270': 'The view is completely blocked by a wall, offering no path forward.', '330': "The closed door blocks the path and provides no information about the bed's location."}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the bed', 'priority': 'medium'}, 'goal_reason': 'A bed is partially visible at the end of the hallway, suggesting the bedroom is in that direction.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 2, 'episode_id': 2}
+

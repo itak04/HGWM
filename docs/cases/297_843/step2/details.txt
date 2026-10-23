@@ -1,0 +1,34 @@
+ACTION_NUMBER
+3
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the back of the room, past the sofa.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST TOILET, and get as close to it as possible. There are 3 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the back of the room, past the sofa.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST TOILET. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (90°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - sofa (unknown): spatial_pos=unknown
+  - armchairs (unknown): spatial_pos=unknown
+  - coffee_table (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+{{'action': 3}}
+
+Action 3 is the best option as it moves further into the room and past the sofa, which directly addresses the current subtask.  While the final goal is the toilet, focusing on the subtask first is important for a structured approach to navigation.
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 90, 'explorable_value': {'30': 1, '90': 2, '150': 5, '210': 2, '270': 7, '330': 1}, 'reason': {'30': 'Stairs present, but they generally do not lead directly to bathrooms. Living room furniture suggests this is not a bathroom or related area.', '90': 'Living room furniture visible. No clear pathways or doors towards a potential bathroom.', '150': 'Could be a hallway leading to other rooms, increasing the chance of finding a bathroom.  Further exploration needed.', '210': 'Mostly wall visible, obstructing the view and offering no clues about the toilet location.', '270': 'A glass door or window suggests another room beyond, which could be a bathroom.  This is a promising direction.', '330': 'Stairs present, but they are unlikely to lead directly to a bathroom.  Similar to angle 30.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the back of the room, past the sofa.', 'priority': 'medium'}, 'goal_reason': 'Living room furniture visible. No clear pathways or doors towards a potential bathroom.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'toilet', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 2, 'episode_id': 297}
+

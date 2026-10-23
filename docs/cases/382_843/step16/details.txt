@@ -1,0 +1,32 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'View into another part of the living room, possibly leading to another area.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 1 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'View into another part of the living room, possibly leading to another area.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (330°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - doorway/opening (unknown): spatial_pos=unknown
+  - wall (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 1 leads into another part of the living room, which may lead to the bedroom and the bed. Thus, I will choose action 1.
+
+{{'action': 1}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 330, 'explorable_value': {'30': 2, '90': 1, '150': 3, '210': 7, '270': 0, '330': 6}, 'reason': {'30': 'Dining area visible.  Potential for adjacent rooms but no clear indicators of a bedroom.', '90': 'View partially blocked by a pillar. Living room furniture visible, low likelihood of bed in this direction.', '150': 'Living room area.  Slightly higher score than 90 due to a clearer view, but still low probability of finding a bed.', '210': 'Clear doorway suggests a transition to a different room, potentially a bedroom or hallway leading to one.  Prioritizing unexplored areas.', '270': 'View completely obstructed, likely a wall. No information available.', '330': 'Another potential doorway or opening.  High score due to unexplored area and the possibility of it leading to a bedroom or hallway connected to bedrooms.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'View into another part of the living room, possibly leading to another area.', 'priority': 'medium'}, 'goal_reason': 'Another potential doorway or opening.  High score due to unexplored area and the possibility of it leading to a bedroom or hallway connected to bedrooms.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 16, 'episode_id': 382}
+

@@ -1,4 +1,5 @@
 from typing import Dict, List, Tuple, Any, Optional, Set
+import copy
 import time
 import re
 import json
@@ -9,6 +10,9 @@ import ast
 import habitat_sim
 
 from base_agent import WMNavAgent
+from graph_contract import (canonical_name, normalize_scene_graph, normalize_goal_graph,
+                            merge_scene_graphs, relation_keys, relation_match_score)
+from ablation_protocol import fusion_coefficients, CallMeter
 from simWrapper import PolarAction
 from utils import *
 from api import *
@@ -61,6 +65,35 @@ class HGWMAgent(WMNavAgent):
         self.confidence_threshold = self.hgwm_cfg.get('confidence_threshold', 0.7)
         self.memory_decay_factor = self.hgwm_cfg.get('memory_decay_factor', 0.9)
         self.panoramic_analysis_mode = self.hgwm_cfg.get('panoramic_analysis_mode', 'directional_scoring')
+        # Explicit ablation controls. Defaults preserve the released HGWM policy.
+        self.use_scene_memory = self.hgwm_cfg.get('use_scene_memory', True)
+        self.use_goal_subgraph = self.hgwm_cfg.get('use_goal_subgraph', True)
+        self.use_structural_correction = self.hgwm_cfg.get('use_structural_correction', True)
+        self.use_llm_arbitration = self.hgwm_cfg.get(
+            'use_llm_arbitration',
+            self.hgwm_cfg.get('enable_multi_stage_reasoning', True),
+        )
+        self.decision_mode = self.hgwm_cfg.get('decision_mode', 'full')
+        if self.decision_mode not in {'full', 'prior_prompt_only', 'graph_direct'}:
+            raise ValueError('invalid hgwm_cfg.decision_mode')
+        self.arbitration_scale = self.hgwm_cfg.get('arbitration_scale', 'legacy')
+        if self.arbitration_scale not in {'legacy', 'matched'}:
+            raise ValueError('invalid hgwm_cfg.arbitration_scale')
+        self.fine_weight_mode = self.hgwm_cfg.get('fine_weight_mode', 'adaptive')
+        if self.fine_weight_mode not in {'adaptive', 'uniform', 'static'}:
+            raise ValueError(
+                "hgwm_cfg.fine_weight_mode must be one of: adaptive, uniform, static"
+            )
+        self.static_fine_weights = self.hgwm_cfg.get(
+            'static_fine_weights',
+            {
+                'room': 0.30,
+                'object': 0.40,
+                'spatial': 0.20,
+                'semantic': 0.05,
+                'depth': 0.05,
+            },
+        )
         
         # Initialize parent class after setting up our attributes
         super().__init__(cfg)
@@ -82,6 +115,14 @@ class HGWMAgent(WMNavAgent):
         }
         
         logging.info("HGWMAgent initialized successfully")
+
+        self._model_meters = {}
+        for role in ['PredictVLM', 'PlanVLM', 'ReasonVLM', 'ReasonLLM']:
+            client = getattr(self, role, None)
+            if client is not None and callable(getattr(client, 'call', None)):
+                meter = CallMeter(client)
+                setattr(self, role, meter)
+                self._model_meters[role] = meter
 
     def _update_unified_memory(self, key: str, data: Dict, goal: str = None):
         """
@@ -222,6 +263,10 @@ class HGWMAgent(WMNavAgent):
         self.perception_memory.clear()
         
         logging.info("HGWMAgent reset complete")
+
+        self._pending_spatial_positions = []
+        for meter in getattr(self, '_model_meters', {}).values():
+            meter.reset_meter()
     
     def _predicting_module(self, evaluator_image, goal):
         """
@@ -236,7 +281,14 @@ class HGWMAgent(WMNavAgent):
         try:
             # === 阶段1: LLM构建目标子图和初始子任务 ===
             print("📋 阶段1: LLM构建目标子图...")
-            goal_subgraph = self._construct_goal_subgraph_via_llm(goal)
+            if self.use_goal_subgraph:
+                goal_subgraph = self._construct_goal_subgraph_via_llm(goal)
+            else:
+                # Prior-free ablation: retain only the target label required by
+                # downstream interfaces, without room, anchor, or topology priors.
+                goal_subgraph = self._get_fallback_goal_subgraph(goal)
+            goal_subgraph = normalize_goal_graph(goal_subgraph, goal)
+            self.last_cached_goal = goal
             self.goal_subgraph.update(goal_subgraph)
             
             # === 阶段2: VLM进行语义增强的全景分析 ===  
@@ -354,15 +406,18 @@ class HGWMAgent(WMNavAgent):
         try:
             # Extract scene graph context from goal subgraph and direction-specific data
             scene_context = ""
+            if getattr(self, 'decision_mode', 'full') == 'prior_prompt_only':
+                direction_scene_data = None
+                self._current_direction_scene_data = {}
             
             # Add direction-specific scene graph information
             if direction_scene_data:
                 spatial_objects = direction_scene_data.get('spatial_objects', [])
                 current_graph = direction_scene_data.get('current_graph', {})
                 vlm_predictions = direction_scene_data.get('vlm_predictions', {})
-                goal_rotate = direction_scene_data.get('goal_rotate', 0)
+                goal_rotate = direction_scene_data.get('direction_degrees', direction_scene_data.get('goal_rotate', 0))
                 
-                scene_context += f"\nCurrent direction ({goal_rotate * 30}°) scene analysis:\n"
+                scene_context += f"\nCurrent direction ({goal_rotate}°) scene analysis:\n"
                 
                 # Add spatial objects information
                 if spatial_objects:
@@ -371,10 +426,12 @@ class HGWMAgent(WMNavAgent):
                 
                 # Add scene graph information
                 if current_graph:
-                    room_nodes = current_graph.get('room_nodes', [])
+                    room_nodes = current_graph.get('room_nodes', {})
+                    if isinstance(room_nodes, dict):
+                        room_nodes = list(room_nodes.values())
                     object_nodes = current_graph.get('object_nodes', [])
                     if room_nodes:
-                        room_types = [room.get('type', 'unknown') for room in room_nodes if isinstance(room, dict)]
+                        room_types = [room.get('name', room.get('room_type', 'unknown')) for room in room_nodes if isinstance(room, dict)]
                         scene_context += f"- Room context: {', '.join(room_types)}\n"
                     if object_nodes:
                         nearby_objects = [obj.get('name', 'unknown') for obj in object_nodes[:3] if isinstance(obj, dict)]
@@ -1993,7 +2050,24 @@ class HGWMAgent(WMNavAgent):
         print(f"\n🧠 增强好奇心更新 (空间-语义整合)")
         
         # === 先进行语义信息回填 ===
+        # In the no-persistent-memory ablation, keep only evidence from the
+        # current panoramic decision step. Directional observations within this
+        # step can still form a local graph, but nothing survives across steps.
+        if not self.use_scene_memory:
+            self.semantic_voxel_map.clear()
+            self.scene_graph_global = {
+                'nodes': [],
+                'edges': [],
+                'spatial_relationships': {},
+                'room_mapping': {},
+            }
+            self.object_position_tracker.clear()
+
         self._backfill_semantic_to_spatial_positions(vlm_predictions)
+        if getattr(self, 'decision_mode', 'full') == 'prior_prompt_only':
+            self._direction_scene_data = {}
+            self._current_direction_scene_data = {}
+            return super().update_curiosity_value(explorable_value, reason)
         
         # 对每个方向进行增强处理 - 先收集所有数据
         direction_data = {}
@@ -2019,9 +2093,13 @@ class HGWMAgent(WMNavAgent):
             # 为重叠计算创建方向特定的vlm_objects字典
             direction_specific_vlm_objects = {direction_str: direction_vlm_data} if direction_vlm_data else {}
             
-            overlap_result = self._calculate_graph_overlap_score_with_subgraph(
-                direction_specific_vlm_objects, goal_subgraph, direction, reason=reason
-            )
+            if getattr(self, 'decision_mode', 'full') == 'graph_direct':
+                current_graph = merge_scene_graphs(self.get_enhanced_scene_graph_for_overlap(direction), current_graph)
+                overlap_result = {'overlap_score': 0.0, 'diagnostics': {'graph_scoring_disabled': True}}
+            else:
+                overlap_result = self._calculate_graph_overlap_score_with_subgraph(
+                    direction_specific_vlm_objects, goal_subgraph, direction, reason=reason, current_graph=current_graph
+                )
             overlap_score = overlap_result.get('overlap_score', 0.0)
             
             # 存储每个方向的数据
@@ -2030,6 +2108,8 @@ class HGWMAgent(WMNavAgent):
                 'spatial_objects': spatial_objects,
                 'current_graph': current_graph,
                 'overlap_score': overlap_score,
+                'graph_diagnostics': overlap_result.get('diagnostics', {}),
+                'direction_degrees': direction,
                 'vlm_predictions': direction_vlm_data,  # 添加VLM预测数据
                 'goal_rotate': direction  # 添加方向信息
             }
@@ -2037,6 +2117,10 @@ class HGWMAgent(WMNavAgent):
             print(f"   空间对象: {len(spatial_objects)}")
             print(f"   图重叠: {overlap_score:.3f}")
         
+        if getattr(self, 'decision_mode', 'full') == 'graph_direct':
+            self._direction_scene_data = direction_data
+            return super().update_curiosity_value(explorable_value, reason)
+
         # === Overlap-Based Reasoning Strategy Selection ===
         # 计算各方向的平均重叠分数以确定探索阶段
         overlap_scores = [data['overlap_score'] for data in direction_data.values()]
@@ -2052,9 +2136,22 @@ class HGWMAgent(WMNavAgent):
         
         # === 阶段5: LLM综合空间推理与方向推荐 ===
         current_goal = getattr(self, 'last_cached_goal', 'unknown_target')
-        llm_result = self._perform_llm_spatial_reasoning(
-            direction_data, current_goal, vlm_predictions, exploration_phase
-        )
+        if self.use_llm_arbitration:
+            llm_result = self._perform_llm_spatial_reasoning(
+                direction_data, current_goal, vlm_predictions, exploration_phase
+            )
+        else:
+            # Deterministic arbitration ablation: select the direction with the
+            # largest graph-overlap score and remove the LLM confidence term.
+            recommended_direction = int(max(
+                direction_data,
+                key=lambda key: direction_data[key]['overlap_score'],
+            )) if direction_data else 90
+            llm_result = {
+                'recommended_direction': recommended_direction,
+                'confidence_score': 0.0,
+                'reasoning_summary': 'LLM arbitration disabled by configuration.',
+            }
         
         recommended_direction = llm_result.get('recommended_direction', 90)
         llm_confidence = llm_result.get('confidence_score', 0.5)
@@ -2073,6 +2170,9 @@ class HGWMAgent(WMNavAgent):
         spatial_weight = weight_adjustments.get('spatial_weight', 0.6)
         semantic_weight = weight_adjustments.get('semantic_weight', 0.2)
         llm_weight = weight_adjustments.get('llm_weight', 0.3)
+        spatial_weight, semantic_weight, llm_weight = fusion_coefficients(
+            spatial_weight, semantic_weight, llm_weight, self.use_llm_arbitration,
+            getattr(self, 'arbitration_scale', 'legacy'))
         
         print(f"🎯 应用 {exploration_phase['phase_name']} 权重策略:")
         print(f"   空间权重: {spatial_weight}, 语义权重: {semantic_weight}, LLM权重: {llm_weight}")
@@ -2134,88 +2234,63 @@ class HGWMAgent(WMNavAgent):
             self._update_semantic_voxel_mapping(r, theta, agent_state, temp_map)
         # 移除_record_spatial_position调用 - 由_map_objects_to_spatial_coordinates_with_voxel统一处理
         
-    def _update_semantic_voxel_mapping(self, r: float, theta: float, agent_state, temp_map: np.ndarray):
-        """
-        更新语义体素映射：将VLM检测到的物体信息映射到体素空间
-        """
-        try:
-            # 计算空间坐标
-            agent_coords = self._global_to_grid(agent_state.position)
-            clipped = min(r, 3.0)  # 限制在有效范围内
-            
-            # 计算局部坐标和全局坐标
-            local_coords = np.array([clipped * np.sin(theta), 0, -clipped * np.cos(theta)])
-            global_coords = local_to_global(agent_state.position, agent_state.rotation, local_coords)
-            point = self._global_to_grid(global_coords)
-            
-            # 获取当前方向的角度字符串
-            direction_deg = int(np.degrees(theta))
-            direction_key = str(((direction_deg + 15) // 30) * 30)  # 转换为30度间隔
-            
-            # 检查是否有该方向的VLM预测数据
-            if hasattr(self, '_current_vlm_predictions') and self._current_vlm_predictions:
-                direction_data = self._current_vlm_predictions.get(direction_key, {})
-                
-                if isinstance(direction_data, dict):
-                    objects = direction_data.get('Objects', direction_data.get('objects', []))
-                    room_type = direction_data.get('Room', direction_data.get('room_type', 'unknown'))
-                    confidence = direction_data.get('Score', direction_data.get('score', 0.5))
-                    
-                    # 更新语义体素映射
-                    voxel_key = f"{point[0]}_{point[1]}"
-                    
-                    if voxel_key not in self.semantic_voxel_map:
-                        self.semantic_voxel_map[voxel_key] = {
-                            'position': point,
-                            'global_coords': global_coords,
-                            'objects': [],
-                            'room_type': room_type,
-                            'confidence': confidence,
-                            'observations': 1,
-                            'last_updated': self.step_ndx if hasattr(self, 'step_ndx') else 0
-                        }
-                    else:
-                        # 更新现有条目
-                        existing = self.semantic_voxel_map[voxel_key]
-                        existing['observations'] += 1
-                        existing['confidence'] = (existing['confidence'] + confidence) / 2
-                        existing['last_updated'] = self.step_ndx if hasattr(self, 'step_ndx') else 0
-                        
-                        # 如果房间类型更确定，更新房间类型
-                        if confidence > existing.get('room_confidence', 0):
-                            existing['room_type'] = room_type
-                            existing['room_confidence'] = confidence
-                    
-                    # 添加物体信息
-                    if isinstance(objects, list):
-                        for obj in objects:
-                            obj_name = obj if isinstance(obj, str) else obj.get('name', str(obj))
-                            if obj_name not in self.semantic_voxel_map[voxel_key]['objects']:
-                                self.semantic_voxel_map[voxel_key]['objects'].append(obj_name)
-                                
-                                # 更新全局场景图
-                                self._update_global_scene_graph(obj_name, point, room_type, voxel_key)
-            
-            print(f"   📍 语义体素更新: 方向{direction_key}°, 位置({point[0]}, {point[1]})")
-                                
-        except Exception as e:
-            print(f"   ⚠️ 语义体素映射更新失败: {e}")
-            
-    def _backfill_semantic_to_spatial_positions(self, vlm_predictions: Dict):
-        """
-        简化版语义信息回填函数
-        由于_map_objects_to_spatial_coordinates_with_voxel已经处理了空间-语义映射，
-        这个函数现在主要用于验证和清理
-        """
+    def _update_semantic_voxel_mapping(self, r, theta, agent_state, temp_map):
+        # Save geometry first. VLM descriptions arrive after the panoramic rays.
+        self.agent_state = agent_state
+        epoch = (getattr(self, 'step_ndx', 0), tuple(float(v) for v in agent_state.position))
+        if getattr(self, '_pending_spatial_epoch', None) != epoch:
+            self._pending_spatial_positions = []
+            self._pending_spatial_epoch = epoch
+        clipped = min(float(r), 3.0)
+        local_coords = np.array([clipped * np.sin(theta), 0, -clipped * np.cos(theta)])
+        global_coords = local_to_global(agent_state.position, agent_state.rotation, local_coords)
+        point = self._global_to_grid(global_coords)
+        sample = {'direction_degrees': float(np.degrees(theta)) % 360,
+                  'position': point, 'global_coords': global_coords}
+        if not hasattr(self, '_pending_spatial_positions'):
+            self._pending_spatial_positions = []
+        self._pending_spatial_positions.append(sample)
+
+    def _backfill_semantic_to_spatial_positions(self, vlm_predictions):
         if not isinstance(vlm_predictions, dict):
-            print(f"   ⚠️ VLM预测数据格式无效 (type: {type(vlm_predictions)})")
             return
-            
-        print(f"   💭 VLM语义数据已可用，包含{len(vlm_predictions)}个方向的预测")
-        
-        # 清理过期的数据结构（如果存在）
-        if hasattr(self, '_pending_spatial_positions'):
-            delattr(self, '_pending_spatial_positions')
+        pending = getattr(self, '_pending_spatial_positions', [])
+        headings = [str(h) for h in [30, 90, 150, 210, 270, 330] if isinstance(vlm_predictions.get(str(h)), dict)]
+        best = {}
+        for sample in pending:
+            if not headings:
+                break
+            angular_error = lambda h: abs((sample['direction_degrees'] - int(h) + 180) % 360 - 180)
+            heading = min(headings, key=angular_error)
+            error = angular_error(heading)
+            if error <= 30 and (heading not in best or error < best[heading][0]):
+                best[heading] = (error, sample)
+        for heading, (_, sample) in best.items():
+            data = vlm_predictions[heading]
+            objects = data.get('Objects', data.get('objects', []))
+            if isinstance(objects, dict):
+                names = list(objects)
+            elif isinstance(objects, list):
+                names = [o.get('name', '') if isinstance(o, dict) else str(o) for o in objects]
+            else:
+                names = []
+            names = [canonical_name(n) for n in names if n]
+            if not names:
+                continue
+            point = sample['position']
+            key = f'{point[0]}_{point[1]}'
+            room = canonical_name(data.get('Room', data.get('room_type', 'unknown')))
+            entry = self.semantic_voxel_map.setdefault(key, {'position': point, 'global_coords': sample['global_coords'],
+                        'objects': [], 'room_type': room, 'confidence': 0.5, 'observations': 0})
+            entry['observations'] += 1
+            entry['last_updated'] = getattr(self, 'step_ndx', 0)
+            entry['room_type'] = room
+            entry['position_source'] = 'depth_navigation_ray'
+            for name in names:
+                if name not in entry['objects']:
+                    entry['objects'].append(name)
+                self._update_global_scene_graph(name, point, room, key)
+        self._pending_spatial_positions = []
             
     def _update_global_scene_graph(self, obj_name: str, position: tuple, room_type: str, voxel_key: str):
         """
@@ -2361,6 +2436,7 @@ class HGWMAgent(WMNavAgent):
                             'room_type': voxel_data['room_type'],
                             'position': voxel_pos,
                             'distance': distance,
+                            'depth_info': {'depth_category': 'foreground' if distance / self.map_scale < 2.0 else ('mid-ground' if distance / self.map_scale < 4.0 else 'background'), 'distance_m': float(distance / self.map_scale)},
                             'angle_offset': angle_diff,
                             'confidence': voxel_data['confidence'],
                             'observations': voxel_data['observations']
@@ -2373,7 +2449,7 @@ class HGWMAgent(WMNavAgent):
                     enhanced_graph['edges'].append(edge)
                     
         print(f"   🌐 构建方向{direction}°增强场景图: {len(enhanced_graph['nodes'])} 节点, {len(enhanced_graph['edges'])} 边")
-        return enhanced_graph
+        return normalize_scene_graph(enhanced_graph)
         
     def _check_semantic_relationship(self, obj1: str, obj2: str) -> str:
         """
@@ -2426,6 +2502,13 @@ class HGWMAgent(WMNavAgent):
             reason: 来自update_curiosity_value的推理上下文
             goal_context: 当前目标的上下文信息
         """
+        scene_graph = normalize_scene_graph(scene_graph)
+        if not self.use_structural_correction:
+            unmodified_graph = copy.deepcopy(scene_graph)
+            unmodified_graph['corrections_applied'] = False
+            unmodified_graph['correction_status'] = 'disabled'
+            return unmodified_graph
+
         if not scene_graph['nodes']:
             return scene_graph
             
@@ -2544,15 +2627,18 @@ class HGWMAgent(WMNavAgent):
         """
         应用LLM建议的修正到场景图
         """
+        scene_graph = normalize_scene_graph(scene_graph)
         corrected_rels = corrections.get('corrected_relationships', [])
         
         # 创建修正后的场景图副本
-        corrected_graph = {
-            'nodes': scene_graph['nodes'].copy(),
-            'edges': [],
-            'corrections_applied': True,
-            'correction_confidence': corrections.get('confidence', 0.5)
-        }
+        # Preserve every observed node. The correction stage audits relation
+        # hypotheses only; it never deletes a detection merely because it is
+        # uncommon under the LLM prior.
+        corrected_graph = copy.deepcopy(scene_graph)
+        corrected_graph['edges'] = []
+        corrected_graph['corrections_applied'] = True
+        corrected_graph['correction_confidence'] = corrections.get('confidence', 0.5)
+        corrected_graph['node_count_before'] = len(scene_graph.get('nodes', []))
         
         # 应用修正后的关系
         for rel in corrected_rels:
@@ -2582,15 +2668,24 @@ class HGWMAgent(WMNavAgent):
                     for existing in corrected_graph['edges']
                 )
                 if not edge_exists:
-                    corrected_graph['edges'].append(edge)
-    def _calculate_graph_overlap_score_with_subgraph(self, vlm_objects: Dict, goal_subgraph: Dict, direction: int = 0, reason: Dict = None) -> Dict:
+                    corrected_graph['edges'].append(copy.deepcopy(edge))
+
+        corrected_graph['node_count_after'] = len(corrected_graph.get('nodes', []))
+        corrected_graph['edge_count_before'] = len(scene_graph.get('edges', []))
+        corrected_graph['edge_count_after'] = len(corrected_graph.get('edges', []))
+        corrected_graph['node_deletion_count'] = (
+            corrected_graph['node_count_before'] - corrected_graph['node_count_after']
+        )
+        return normalize_scene_graph(corrected_graph)
+    def _calculate_graph_overlap_score_with_subgraph(self, vlm_objects: Dict, goal_subgraph: Dict, direction: int = 0, reason: Dict = None, current_graph: Dict = None) -> Dict:
         """
         增强版分层图重叠计算：充分利用深度信息和空间关系精度
         基于房间-对象分层架构，集成深度感知和关系推理
         """
         try:
             # 获取当前方向的增强版分层场景图
-            hierarchical_scene_graph = self.get_enhanced_scene_graph_for_overlap(direction)
+            goal_subgraph = normalize_goal_graph(goal_subgraph, getattr(self, '_current_goal', ''))
+            hierarchical_scene_graph = merge_scene_graphs(self.get_enhanced_scene_graph_for_overlap(direction), current_graph)
             
             # 应用场景图修正（传入reason上下文）
             goal_context = goal_subgraph.get('target_object', '') if isinstance(goal_subgraph, dict) else ''
@@ -2671,6 +2766,29 @@ class HGWMAgent(WMNavAgent):
                 depth_weight = 0.05
             
             # 基础综合评分
+            # Weight-sensitivity modes used by the reviewer-requested ablation.
+            # "adaptive" is the released policy above; "uniform" and "static"
+            # replace only this fine-match mixture and leave all other modules
+            # unchanged.
+            if self.fine_weight_mode == 'uniform':
+                room_weight = object_weight = spatial_weight = semantic_weight = depth_weight = 0.20
+            elif self.fine_weight_mode == 'static':
+                requested = {
+                    'room': float(self.static_fine_weights.get('room', 0.0)),
+                    'object': float(self.static_fine_weights.get('object', 0.0)),
+                    'spatial': float(self.static_fine_weights.get('spatial', 0.0)),
+                    'semantic': float(self.static_fine_weights.get('semantic', 0.0)),
+                    'depth': float(self.static_fine_weights.get('depth', 0.0)),
+                }
+                total_weight = sum(requested.values())
+                if total_weight <= 0:
+                    raise ValueError('static_fine_weights must have a positive sum')
+                room_weight = requested['room'] / total_weight
+                object_weight = requested['object'] / total_weight
+                spatial_weight = requested['spatial'] / total_weight
+                semantic_weight = requested['semantic'] / total_weight
+                depth_weight = requested['depth'] / total_weight
+
             base_final_score = (
                 room_match_score * room_weight +
                 object_match_score * object_weight +
@@ -2756,7 +2874,16 @@ class HGWMAgent(WMNavAgent):
                 'spatial_relationships_count': len(corrected_scene_graph.get('spatial_relationships', [])),
                 'voxel_validation_rate': self._calculate_voxel_validation_rate(corrected_scene_graph),
                 'optimization_used': 'hierarchical_depth_enhanced',
-                'depth_enhanced_bonus': depth_enhanced_bonus
+                'depth_enhanced_bonus': depth_enhanced_bonus,
+                'fine_weight_mode': self.fine_weight_mode,
+                'component_weights': {
+                    'room': room_weight,
+                    'object': object_weight,
+                    'spatial': spatial_weight,
+                    'semantic': semantic_weight,
+                    'depth': depth_weight,
+                },
+                'node_deletion_count': corrected_scene_graph.get('node_deletion_count', 0),
             }
             
             print(f"   🏗️ 深度增强分层重叠: 总分{final_score:.3f} "
@@ -2764,12 +2891,26 @@ class HGWMAgent(WMNavAgent):
                   f"空间:{spatial_match_score:.3f}, 深度:{depth_consistency:.3f}) "
                   f"质量:{scene_quality:.3f}")
             
+            self._last_graph_diagnostics = {
+                'direction_degrees': int(direction), 'step': getattr(self, 'step_ndx', None), 'schema_version': 1,
+                **corrected_scene_graph['schema_diagnostics'],
+                'features': {'room': float(room_match_score), 'object': float(object_match_score),
+                             'spatial': float(spatial_match_score), 'semantic': float(semantic_consistency),
+                             'depth': float(depth_consistency)},
+                'fine_score': float(overlap_result['overlap_score']), 'fallback_used': False}
+            overlap_result['diagnostics'] = self._last_graph_diagnostics
+            logging.info('HGWM_GRAPH_DIAGNOSTICS %s', json.dumps(self._last_graph_diagnostics, default=str, sort_keys=True))
             return overlap_result
             
         except Exception as e:
             print(f"   ⚠️ 深度增强重叠计算失败: {e}")
             # 回退到基础计算
-            return self._fallback_overlap_calculation(vlm_objects, goal_subgraph)
+            result = self._fallback_overlap_calculation(vlm_objects, goal_subgraph)
+            self._last_graph_diagnostics = {'direction_degrees': int(direction), 'fallback_used': True,
+                                           'error_type': type(e).__name__, 'error': str(e)}
+            result['diagnostics'] = self._last_graph_diagnostics
+            logging.warning('HGWM_GRAPH_FALLBACK %s', json.dumps(self._last_graph_diagnostics, default=str))
+            return result
     
     def _calculate_enhanced_room_level_overlap(self, scene_graph: Dict, goal_subgraph: Dict) -> Dict:
         """增强版房间级别重叠计算，考虑深度分布"""
@@ -2851,7 +2992,7 @@ class HGWMAgent(WMNavAgent):
                 for layer, objects in depth_layers.items()
             }
         else:
-            layer_distribution = {'foreground': 0.33, 'mid-ground': 0.34, 'background': 0.33}
+            return {'depth_consistency': 0.0, 'layer_distribution': {}, 'scene_alignment': 0.0, 'missing_depth': True}
         
         # 理想的深度分布（可以根据目标调整）
         ideal_distribution = {'foreground': 0.3, 'mid-ground': 0.4, 'background': 0.3}
@@ -3041,80 +3182,29 @@ class HGWMAgent(WMNavAgent):
                 
         return total_relevance / max(total_weight, 0.1)
         
-    def _calculate_room_level_overlap(self, hierarchical_graph: Dict, goal_subgraph: Dict) -> Dict:
-        """
-        计算房间级别的重叠匹配度
-        """
-        try:
-            # 提取目标子图中的房间信息
-            goal_rooms = set()
-            goal_spatial_regions = set()
-            
-            if isinstance(goal_subgraph, dict):
-                # 从节点中提取房间相关信息
-                nodes = goal_subgraph.get('nodes', [])
-                for node in nodes:
-                    if isinstance(node, dict):
-                        node_name = node.get('name', '').lower()
-                        # 识别房间类型节点
-                        if any(room_word in node_name for room_word in 
-                               ['kitchen', 'bathroom', 'bedroom', 'living', 'dining', 'office']):
-                            goal_rooms.add(node_name)
-                        
-                        # 识别空间区域
-                        spatial_region = self._classify_spatial_region(node.get('position', {}))
-                        if spatial_region != 'unknown':
-                            goal_spatial_regions.add(spatial_region)
-            
-            # 提取当前场景图中的房间节点
-            current_rooms = set()
-            current_spatial_regions = set()
-            
-            room_nodes = hierarchical_graph.get('room_nodes', {})
-            for room_id, room_data in room_nodes.items():
-                room_name = room_data.get('name', room_id).lower()
-                current_rooms.add(room_name)
-                
-                # 获取房间的空间区域
-                room_region = room_data.get('spatial_region', 'unknown')
-                if room_region != 'unknown':
-                    current_spatial_regions.add(room_region)
-            
-            # 计算房间名称匹配度
-            room_name_overlap = len(current_rooms.intersection(goal_rooms))
-            room_name_total = len(current_rooms.union(goal_rooms))
-            room_name_score = room_name_overlap / max(room_name_total, 1) if room_name_total > 0 else 0
-            
-            # 计算空间区域匹配度
-            spatial_overlap = len(current_spatial_regions.intersection(goal_spatial_regions))
-            spatial_total = len(current_spatial_regions.union(goal_spatial_regions))
-            spatial_score = spatial_overlap / max(spatial_total, 1) if spatial_total > 0 else 0
-            
-            # 房间连接性评分
-            connectivity_score = self._evaluate_room_connectivity(room_nodes)
-            
-            # 综合房间匹配分数 (名称匹配50% + 空间区域匹配30% + 连接性20%)
-            room_match_score = (room_name_score * 0.5 + spatial_score * 0.3 + connectivity_score * 0.2)
-            
-            return {
-                'room_match_score': min(1.0, room_match_score),
-                'matched_rooms': list(current_rooms.intersection(goal_rooms)),
-                'room_confidence': room_name_score,
-                'spatial_region_match': spatial_score,
-                'connectivity_score': connectivity_score,
-                'total_current_rooms': len(current_rooms),
-                'total_goal_rooms': len(goal_rooms)
-            }
-            
-        except Exception as e:
-            print(f"   ⚠️ 房间级别匹配计算失败: {e}")
-            return {
-                'room_match_score': 0.0,
-                'matched_rooms': [],
-                'room_confidence': 0.0,
-                'spatial_region_match': 0.0,
-                'connectivity_score': 0.0
-            }
+    def _calculate_room_level_overlap(self, hierarchical_graph, goal_subgraph):
+        scene = normalize_scene_graph(hierarchical_graph)
+        goal = normalize_goal_graph(goal_subgraph, getattr(self, '_current_goal', ''))
+        goal_nodes = [n for n in goal['nodes'] if n.get('type') == 'room']
+        current_nodes = list(scene['room_nodes'].values())
+        goal_rooms = {n['name'] for n in goal_nodes}
+        current_rooms = {n['name'] for n in current_nodes}
+        def regions(nodes):
+            result = set()
+            for node in nodes:
+                value = node.get('spatial_region') or node.get('position_description') or node.get('position', '')
+                region = self._classify_spatial_region(value)
+                if region != 'unknown':
+                    result.add(region)
+            return result
+        goal_regions, current_regions = regions(goal_nodes), regions(current_nodes)
+        name_score = len(current_rooms & goal_rooms) / max(1, len(current_rooms | goal_rooms))
+        spatial_score = len(current_regions & goal_regions) / max(1, len(current_regions | goal_regions))
+        connectivity = self._evaluate_room_connectivity(scene['room_nodes'])
+        return {'room_match_score': min(1.0, 0.5 * name_score + 0.3 * spatial_score + 0.2 * connectivity),
+                'matched_rooms': sorted(current_rooms & goal_rooms), 'room_confidence': name_score,
+                'spatial_region_match': spatial_score, 'connectivity_score': connectivity,
+                'total_current_rooms': len(current_rooms), 'total_goal_rooms': len(goal_rooms)}
     
     def _calculate_object_level_overlap(self, vlm_objects: Dict, hierarchical_graph: Dict, goal_subgraph: Dict, room_scores: Dict) -> Dict:
         """
@@ -3132,48 +3222,20 @@ class HGWMAgent(WMNavAgent):
                         # 处理字典格式的Objects（主要格式）
                         if isinstance(objects, dict):
                             for obj_name, position_info in objects.items():
-                                current_objects.add(obj_name.lower())
+                                current_objects.add(canonical_name(obj_name))
                         
                         # 处理列表格式的Objects（备用格式）
                         elif isinstance(objects, list):
                             for obj in objects:
                                 obj_name = obj if isinstance(obj, str) else obj.get('name', str(obj))
-                                current_objects.add(obj_name.lower())
+                                current_objects.add(canonical_name(obj_name))
             
             # 从目标子图中提取目标物体名称
-            target_objects = set()
-            current_goal = getattr(self, '_current_goal', '').lower() if hasattr(self, '_current_goal') else ''
-            
-            # 首先添加当前目标
+            target_objects = {canonical_name(n.get('name', '')) for n in goal_subgraph.get('nodes', [])
+                              if n.get('type') != 'room' and n.get('name')}
+            current_goal = canonical_name(getattr(self, '_current_goal', '') or goal_subgraph.get('target_object', ''))
             if current_goal:
                 target_objects.add(current_goal)
-                print(f"   🎯 当前目标物体: {current_goal}")
-            
-            # 然后从goal_subgraph中提取
-            if isinstance(goal_subgraph, dict):
-                # 从spatial_anchor_objects提取真实的物体名称
-                spatial_anchors = goal_subgraph.get('spatial_anchor_objects', {})
-                if isinstance(spatial_anchors, dict):
-                    for obj_key, obj_info in spatial_anchors.items():
-                        if isinstance(obj_info, dict):
-                            # 提取实际的物体名称，而不是占位符键名
-                            actual_name = obj_info.get('name', obj_key)
-                            target_objects.add(str(actual_name).lower())
-                        else:
-                            target_objects.add(str(obj_info).lower())
-                elif isinstance(spatial_anchors, list):
-                    for obj_name in spatial_anchors:
-                        target_objects.add(str(obj_name).lower())
-                
-                # 从nodes中提取（备用）
-                nodes = goal_subgraph.get('nodes', [])
-                if isinstance(nodes, list):
-                    for node in nodes:
-                        if isinstance(node, dict):
-                            obj_name = node.get('name', node.get('id', ''))
-                            if obj_name:
-                                target_objects.add(str(obj_name).lower())
-            
             print(f"   📊 对象匹配分析: VLM检测={list(current_objects)}, 目标={list(target_objects)}")
             
             # 从分层场景图中提取物体（优先考虑匹配房间中的物体）
@@ -3271,50 +3333,14 @@ class HGWMAgent(WMNavAgent):
                 'target_objects_found': []
             }
     
-    def _calculate_hierarchical_spatial_match(self, hierarchical_graph: Dict, goal_subgraph: Dict) -> Dict:
-        """
-        计算分层空间关系匹配度
-        """
-        try:
-            # 房间层级空间关系
-            room_spatial_score = self._evaluate_room_spatial_relationships(
-                hierarchical_graph.get('room_edges', []), goal_subgraph
-            )
-            
-            # 对象层级空间关系
-            object_spatial_score = self._evaluate_object_spatial_relationships(
-                hierarchical_graph.get('object_edges', []), 
-                hierarchical_graph.get('room_object_edges', []),
-                goal_subgraph
-            )
-            
-            # 跨层级关系匹配
-            cross_level_score = self._evaluate_cross_level_relationships(
-                hierarchical_graph, goal_subgraph
-            )
-            
-            # 综合空间关系分数 (房间40% + 对象40% + 跨层级20%)
-            spatial_match_score = (
-                room_spatial_score * 0.4 + 
-                object_spatial_score * 0.4 + 
-                cross_level_score * 0.2
-            )
-            
-            return {
-                'spatial_match_score': min(1.0, spatial_match_score),
-                'room_spatial_score': room_spatial_score,
-                'object_spatial_score': object_spatial_score,
-                'cross_level_score': cross_level_score
-            }
-            
-        except Exception as e:
-            print(f"   ⚠️ 分层空间关系计算失败: {e}")
-            return {
-                'spatial_match_score': 0.0,
-                'room_spatial_score': 0.0,
-                'object_spatial_score': 0.0,
-                'cross_level_score': 0.0
-            }
+    def _calculate_hierarchical_spatial_match(self, hierarchical_graph, goal_subgraph):
+        scene = normalize_scene_graph(hierarchical_graph)
+        goal = normalize_goal_graph(goal_subgraph, getattr(self, '_current_goal', ''))
+        room = relation_match_score(scene, goal, 'room_edges')
+        obj = relation_match_score(scene, goal, 'object_edges')
+        cross = relation_match_score(scene, goal, 'room_object_edges')
+        return {'spatial_match_score': min(1.0, 0.4 * room + 0.4 * obj + 0.2 * cross),
+                'room_spatial_score': room, 'object_spatial_score': obj, 'cross_level_score': cross}
     
     def _calculate_semantic_consistency(self, hierarchical_graph: Dict, goal_subgraph: Dict, vlm_objects: Dict) -> Dict:
         """
@@ -3361,7 +3387,7 @@ class HGWMAgent(WMNavAgent):
         """评估房间连接性得分"""
         try:
             if not room_nodes or len(room_nodes) <= 1:
-                return 1.0
+                return 0.0
             
             # 计算房间间的连接度
             total_rooms = len(room_nodes)
@@ -3467,7 +3493,7 @@ class HGWMAgent(WMNavAgent):
                         objects = direction_data.get('Objects', direction_data.get('objects', []))
                         for obj in objects:
                             obj_name = obj if isinstance(obj, str) else obj.get('name', str(obj))
-                            vlm_object_names.add(obj_name.lower())
+                            vlm_object_names.add(canonical_name(obj_name))
             
             # 提取场景图对象
             scene_object_names = set()
@@ -3476,7 +3502,7 @@ class HGWMAgent(WMNavAgent):
             
             # 计算语义对齐度
             if not vlm_object_names and not scene_object_names:
-                return 1.0
+                return 0.0
             
             overlap = len(vlm_object_names.intersection(scene_object_names))
             union = len(vlm_object_names.union(scene_object_names))
@@ -4352,28 +4378,15 @@ class HGWMAgent(WMNavAgent):
         # 如果在相同的水平或深度区域，认为有位置关系
         return same_horizontal or same_depth
     
-    def _classify_spatial_region(self, position_description: str) -> str:
-        """根据位置描述分类空间区域"""
-        if not position_description:
-            return 'center'
-        
+    def _classify_spatial_region(self, position_description):
+        if isinstance(position_description, dict):
+            position_description = position_description.get('description', '')
+        if not isinstance(position_description, str) or not position_description.strip():
+            return 'unknown'
         pos = position_description.lower()
-        
-        # 水平位置
-        horizontal = 'center'
-        if 'left' in pos:
-            horizontal = 'left'
-        elif 'right' in pos:
-            horizontal = 'right'
-            
-        # 深度位置
-        depth = 'middle'
-        if 'foreground' in pos or 'front' in pos:
-            depth = 'front'
-        elif 'background' in pos or 'far' in pos:
-            depth = 'back'
-        
-        return f"{horizontal}_{depth}"
+        horizontal = 'left' if 'left' in pos else ('right' if 'right' in pos else 'center')
+        depth = 'front' if ('foreground' in pos or 'front' in pos) else ('back' if ('background' in pos or 'far' in pos) else 'middle')
+        return f'{horizontal}_{depth}'
     
     def _get_adjacent_regions(self, region_key: str, all_regions: list) -> list:
         """获取相邻空间区域"""

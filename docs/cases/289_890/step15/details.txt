@@ -1,0 +1,18 @@
+ACTION_NUMBER
+3
+
+LOCATOR_RESPONSE
+```json
+{'Number': 3}
+```
+There is a chair in the image. Number 3 is the best option as it leads directly towards the chair.
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 210, 'explorable_value': {'30': 8, '90': 1, '150': 2, '210': 7, '270': 0, '330': 9}, 'reason': {'30': 'Chairs are visible in the dining room.  This is a high-priority area to check.', '90': 'Appears to be a blank wall, likely a transition area. Low score due to lack of furniture or defining features.', '150': 'Open doorway, but no visible furniture.  Could lead to another room, but no indication of a chair.', '210': 'More chairs are visible at a table.  Another high-priority area.', '270': 'View is blocked by the refrigerator.  No indication of a chair.', '330': 'Chairs are clearly visible around a table.  Highest priority direction.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': True, 'subtask': {'description': 'Go to the chairs at the table', 'priority': 'medium'}, 'goal_reason': 'More chairs are visible at a table.  Another high-priority area.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'chair', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 15, 'episode_id': 289}
+

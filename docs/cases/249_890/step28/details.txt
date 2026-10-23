@@ -1,0 +1,33 @@
+ACTION_NUMBER
+1
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the open door.', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST TV SCREEN, and get as close to it as possible. There are 0 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. In order to complete the subtask {'description': 'Go to the open door.', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST TV SCREEN. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (330°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - wardrobe (unknown): spatial_pos=unknown
+  - drawers (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+I am up against a wardrobe, so I will move away from it by taking action 1. This should give me a better view of the room and help me find the open door and eventually the TV.
+
+{{'action': 1}}
+
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 330, 'explorable_value': {'30': 0, '90': 0, '150': 2, '210': 5, '270': 6, '330': 0}, 'reason': {'30': 'This view shows a wall of wardrobes, indicating a bedroom and a dead end.  Unlikely to find a TV here.', '90': 'This view is clearly a bedroom focused on the bed.  Low probability of a TV being directly in front of a bed.', '150': "While this view shows more of the bedroom, it is still within the bedroom and partially obstructed by furniture.  There might be a small chance of a TV being visible from this angle, but it's low.", '210': 'This view offers a clear path towards a window, potentially leading to a sunroom or living room, increasing the chances of finding a TV.', '270': 'This view shows a window, which could offer a glimpse into another room where a TV might be located. The open space along the wall also suggests potential pathways.', '330': 'Similar to the 30-degree view, this is a dead end with a wall of wardrobes, making it unlikely to find a TV.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the open door.', 'priority': 'medium'}, 'goal_reason': 'Similar to the 30-degree view, this is a dead end with a wall of wardrobes, making it unlikely to find a TV.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'tv screen', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 28, 'episode_id': 249}
+

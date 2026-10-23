@@ -1,0 +1,32 @@
+ACTION_NUMBER
+3
+
+ACTION_PROMPT
+TASK: {'description': 'Go to the next room', 'priority': 'medium'}. Your final task is to NAVIGATE TO THE NEAREST BED, and get as close to it as possible. There are 5 red arrows superimposed onto your observation, which represent potential actions. These are labeled with a number in a white circle, which represent the location you would move to if you took that action. NOTE: choose action 0 if you want to TURN AROUND or DONT SEE ANY GOOD ACTIONS. In order to complete the subtask {'description': 'Go to the next room', 'priority': 'medium'} and eventually the final task NAVIGATING TO THE NEAREST BED. Explain which action acheives that best. 
+
+🎯 SCENE ANALYSIS for current direction (30°):
+📍 Detected Objects and Their Locations:
+
+🗺️ Spatial Object Mapping:
+  - dining_table (unknown): spatial_pos=unknown
+  - sofa (unknown): spatial_pos=unknown
+  - plant (unknown): spatial_pos=unknown
+
+🏠 Room Context: 
+
+💡 Use this spatial information to make more informed navigation decisions!
+Return your answer as {{'action': <action_key>}}. Note you CANNOT GO THROUGH CLOSED DOORS, and you DO NOT NEED TO GO UP OR DOWN STAIRS
+
+ACTION_RESPONSE
+Action 3 is the best option, as it moves further into the next room which is the current subtask.  This will likely bring me closer to the final goal of navigating to the nearest bed.
+{{'action': 3}}
+
+COT_EVALUATOR_RESPONSE
+{'goal_rotate_degrees': 30, 'explorable_value': {'30': 2, '90': 1, '150': 3, '210': 7, '270': 0, '330': 1}, 'reason': {'30': 'Open path to another room, but no clear indicators of a bedroom.', '90': 'Appears to be a kitchen area, unlikely to contain a bed. Low score due to the presence of kitchen cabinets.', '150': 'Living room area.  Could lead to a bedroom, but no direct evidence.', '210': 'Living room area. Higher score than 150 due to more open space and potential pathways not fully visible.', '270': 'Fireplace blocks the view and the path.', '330': 'Dining room, low probability of finding a bed.'}, 'cot_stats': {}}
+
+COT_PLANNING_RESPONSE
+{'goal_flag': False, 'subtask': {'description': 'Go to the next room', 'priority': 'medium'}, 'goal_reason': 'Open path to another room, but no clear indicators of a bedroom.'}
+
+GOAL_SUBGRAPH_RESPONSE
+{'target_object': 'bed', 'subgraph_info': {'target_rooms': [], 'nodes_count': 0, 'edges_count': 0, 'vlm_semantic_hints': {}, 'subgraph_cached': True, 'construction_method': 'llm_generated'}, 'step_number': 12, 'episode_id': 450}
+
